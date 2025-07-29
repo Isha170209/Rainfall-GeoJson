@@ -5,8 +5,8 @@ from shapely.geometry import Point
 from datetime import datetime
 
 # === Date Setup ===
-today = datetime.now().strftime('%Y-%m-%d')
-rain_csv_path = f"data/rain_merged_{today}.csv"
+yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+rain_csv_path = f"data/rain_merged_{yesterday}.csv"
 
 # === Shapefile Path (external) ===
 shapefile_path = "shapefiles/India_tehsils.shp"  # Keep shapefiles local but not tracked
