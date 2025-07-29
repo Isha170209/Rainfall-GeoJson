@@ -10,7 +10,7 @@ jobs:
     runs-on: windows-latest
 
     permissions:
-      contents: write
+      contents: write  # <-- This gives permission to push changes using GITHUB_TOKEN
 
     steps:
       - name: Checkout code
