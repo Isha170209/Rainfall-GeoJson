@@ -9,7 +9,6 @@ shapefiles/
 # Ignore output data
 data/
 *.geojson
-*.csv
 
 # Python cache
 __pycache__/
