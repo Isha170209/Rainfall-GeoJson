@@ -3,44 +3,27 @@ import zipfile
 import requests
 import pandas as pd
 import geopandas as gpd
+import gdown
 from shapely.geometry import Point
 from datetime import datetime, timedelta
 
-# === CONFIG ===
-GOOGLE_DRIVE_FILE_ID = "1ciHMHl-QrhXx7gydBmh4iWKaAWOsIWMM"  # <-- Replace this with your actual file ID
+# === Download & Extract Shapefile if not present ===
+GOOGLE_DRIVE_FILE_ID = "1ciHMHl-QrhXx7gydBmh4iWKaAWOsIWMM"
 ZIP_PATH = "India_tehsils.zip"
 EXTRACT_DIR = "shapefiles/India_tehsils"
 shapefile_path = os.path.join(EXTRACT_DIR, "India_tehsils.shp")
-
-# === Download & Extract Shapefile if not present ===
-def download_from_google_drive(file_id, destination):
-    URL = "https://drive.google.com/uc?export=download"
-    session = requests.Session()
-    response = session.get(URL, params={'id': file_id}, stream=True)
-    
-    # Handle large file confirmation
-    for key, value in response.cookies.items():
-        if key.startswith('download_warning'):
-            response = session.get(URL, params={'id': file_id, 'confirm': value}, stream=True)
-    
-    with open(destination, "wb") as f:
-        for chunk in response.iter_content(32768):
-            f.write(chunk)
-
-def extract_zip(zip_path, extract_to):
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        zip_ref.extractall(extract_to)
 
 # Create directory if not exists
 if not os.path.exists(EXTRACT_DIR):
     os.makedirs(EXTRACT_DIR)
 
-# Download if shapefile not already present
+# Download and extract if shapefile doesn't exist
 if not os.path.exists(shapefile_path):
     print("📥 Downloading shapefile from Google Drive...")
-    download_from_google_drive(GOOGLE_DRIVE_FILE_ID, ZIP_PATH)
+    gdown.download(f"https://drive.google.com/uc?id={GOOGLE_DRIVE_FILE_ID}", ZIP_PATH, quiet=False)
     print("📦 Extracting shapefile...")
-    extract_zip(ZIP_PATH, EXTRACT_DIR)
+    with zipfile.ZipFile(ZIP_PATH, 'r') as zip_ref:
+        zip_ref.extractall(EXTRACT_DIR)
     os.remove(ZIP_PATH)
     print("✅ Shapefile ready.")
 
