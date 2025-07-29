@@ -6,9 +6,10 @@ shapefiles/
 *.prj
 *.cpg
 
-# Ignore output data
-data/
+# Ignore output data except for CSVs in data/
 *.geojson
+!data/
+!data/*.csv
 
 # Python cache
 __pycache__/
