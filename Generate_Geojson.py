@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # === Date Setup ===
 yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
