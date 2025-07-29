@@ -12,7 +12,7 @@ rain_csv_path = f"data/rain_merged_{yesterday}.csv"
 shapefile_path = "shapefiles/India_tehsils.shp"  # Keep shapefiles local but not tracked
 
 # === Output Paths ===
-output_rain_geojson = f"data/India_rainfall_{today}.geojson"
+output_rain_geojson = f"data/India_rainfall_{yesterday}.geojson"
 output_tehsil_geojson = f"data/India_tehsils_clean.geojson"
 
 # === Function Definitions remain same ===
