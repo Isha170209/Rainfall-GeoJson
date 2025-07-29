@@ -2,7 +2,7 @@ name: Run IMD Script Daily
 
 on:
   schedule:
-    - cron: '0 4 * * *'  # 9:30 AM IST
+    - cron: '30 2 * * *'  # 8:00 AM IST (IST = UTC+5:30)
   workflow_dispatch:
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     runs-on: windows-latest
 
     permissions:
-      contents: write  # <-- This gives permission to push changes using GITHUB_TOKEN
+      contents: write
 
     steps:
       - name: Checkout code
