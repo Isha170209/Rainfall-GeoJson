@@ -29,35 +29,35 @@ jobs:
       - name: Run GeoJSON Conversion Script
         run: python Generate_Geojson.py
 
-      - name: Copy latest GeoJSON into dashboard and update manifest
+      - name: Copy latest GeoJSON into root data/ and update manifest
         run: |
           set -e
-          mkdir -p dashboard/data
-          # compute yesterday's date (UTC+0) — adjust if you want IST logic
+          mkdir -p data
           YESTERDAY=$(date -d '1 day ago' +%F)
           SRC="data/India_rainfall_${YESTERDAY}.geojson"
 
           if [ -f "$SRC" ]; then
-            cp "$SRC" "dashboard/data/India_rainfall_${YESTERDAY}.geojson"
-            cp "$SRC" "dashboard/data/latest.geojson"
-            echo "Copied $SRC to dashboard/data"
+            cp "$SRC" "data/India_rainfall_${YESTERDAY}.geojson"
+            cp "$SRC" "data/latest.geojson"
+            echo "Copied $SRC to root data/"
           else
             LATEST=$(ls -1 data/India_rainfall_*.geojson 2>/dev/null | tail -n 1 || true)
             if [ -n "$LATEST" ]; then
-              cp "$LATEST" "dashboard/data/latest.geojson"
+              cp "$LATEST" "data/latest.geojson"
               echo "Copied fallback: $LATEST"
             else
               echo "No geojson found in data/ to copy."
             fi
           fi
 
-          # write manifest.json (optional but useful for dashboard)
+          # write manifest.json
           python3 - <<PY
 import json, os
-fn = os.path.basename("dashboard/data/latest.geojson")
+fn = os.path.basename("data/latest.geojson")
 d = {"latest": fn, "dates": [fn]}
-open("dashboard/data/manifest.json", "w").write(json.dumps(d))
+open("data/manifest.json", "w").write(json.dumps(d))
 PY
+
 
           # commit changes
           git config user.name "github-actions"
