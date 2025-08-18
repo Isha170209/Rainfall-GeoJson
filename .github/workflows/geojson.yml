@@ -37,9 +37,8 @@ jobs:
           SRC="data/India_rainfall_${YESTERDAY}.geojson"
 
           if [ -f "$SRC" ]; then
-            cp "$SRC" "data/India_rainfall_${YESTERDAY}.geojson"
             cp "$SRC" "data/latest.geojson"
-            echo "Copied $SRC to root data/"
+            echo "Copied $SRC to data/latest.geojson"
           else
             LATEST=$(ls -1 data/India_rainfall_*.geojson 2>/dev/null | tail -n 1 || true)
             if [ -n "$LATEST" ]; then
@@ -51,18 +50,19 @@ jobs:
           fi
 
           # write manifest.json
-          python3 - <<PY
+          python3 - <<'PY'
 import json, os
 fn = os.path.basename("data/latest.geojson")
-d = {"latest": fn, "dates": [fn]}
-open("data/manifest.json", "w").write(json.dumps(d))
+manifest = {"latest": fn}
+with open("data/manifest.json", "w") as f:
+    json.dump(manifest, f)
 PY
 
-
-          # commit changes
+      - name: Commit changes
+        run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add dashboard/data || true
+          git add data/
           git commit -m "Update dashboard data for ${YESTERDAY}" || echo "No changes to commit"
 
       - name: Push dashboard updates
