@@ -1,6 +1,6 @@
 // dashboard/js/app.js
 (async function(){
-  const dataBase = 'data/';
+  const dataBase = '../data/';
   const manifestUrl = dataBase + 'manifest.json';
   const latestFallback = dataBase + 'latest.geojson';
   const cacheBust = '?_=' + Date.now();
