@@ -6,6 +6,7 @@ import geopandas as gpd
 import gdown
 from shapely.geometry import Point
 from datetime import datetime, timedelta
+import json  # <-- Added for manifest
 
 # === Download & Extract Shapefile if not present ===
 GOOGLE_DRIVE_FILE_ID = "1ciHMHl-QrhXx7gydBmh4iWKaAWOsIWMM"
@@ -34,6 +35,7 @@ rain_csv_path = f"data/rain_merged_{yesterday}.csv"
 # === Output Paths ===
 output_rain_geojson = f"data/India_rainfall_{yesterday}.geojson"
 output_tehsil_geojson = f"data/India_tehsils_clean.geojson"
+manifest_path = "data/manifest.json"
 
 # === Text Cleaning Function ===
 def clean_text(text):
@@ -105,3 +107,14 @@ for _, row in df.iterrows():
 gdf = gpd.GeoDataFrame(features, crs='EPSG:4326')
 gdf.to_file(output_rain_geojson, driver='GeoJSON')
 print(f"✅ Rainfall GeoJSON saved to: {output_rain_geojson} with {len(gdf)} features.")
+
+# === Create/Update Manifest JSON ===
+manifest = {
+    "latest": os.path.basename(output_rain_geojson),  # e.g., India_rainfall_2025-08-17.geojson
+    "generated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+}
+
+with open(manifest_path, "w") as f:
+    json.dump(manifest, f, indent=2)
+
+print(f"📄 Manifest updated: {manifest_path}")
