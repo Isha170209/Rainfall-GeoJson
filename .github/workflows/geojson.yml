@@ -29,10 +29,43 @@ jobs:
       - name: Run GeoJSON Conversion Script
         run: python Generate_Geojson.py
 
-      - name: Commit and push new GeoJSON
+      - name: Copy latest GeoJSON into dashboard and update manifest
         run: |
+          set -e
+          mkdir -p dashboard/data
+          # compute yesterday's date (UTC+0) — adjust if you want IST logic
+          YESTERDAY=$(date -d '1 day ago' +%F)
+          SRC="data/India_rainfall_${YESTERDAY}.geojson"
+
+          if [ -f "$SRC" ]; then
+            cp "$SRC" "dashboard/data/India_rainfall_${YESTERDAY}.geojson"
+            cp "$SRC" "dashboard/data/latest.geojson"
+            echo "Copied $SRC to dashboard/data"
+          else
+            LATEST=$(ls -1 data/India_rainfall_*.geojson 2>/dev/null | tail -n 1 || true)
+            if [ -n "$LATEST" ]; then
+              cp "$LATEST" "dashboard/data/latest.geojson"
+              echo "Copied fallback: $LATEST"
+            else
+              echo "No geojson found in data/ to copy."
+            fi
+          fi
+
+          # write manifest.json (optional but useful for dashboard)
+          python3 - <<PY
+import json, os
+fn = os.path.basename("dashboard/data/latest.geojson")
+d = {"latest": fn, "dates": [fn]}
+open("dashboard/data/manifest.json", "w").write(json.dumps(d))
+PY
+
+          # commit changes
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add dashboard/*.geojson || echo "No geojson to add"
-          git diff --cached --quiet || git commit -m "Update daily GeoJSON"
-          git push
+          git add dashboard/data || true
+          git commit -m "Update dashboard data for ${YESTERDAY}" || echo "No changes to commit"
+
+      - name: Push dashboard updates
+        uses: ad-m/github-push-action@v0.6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
