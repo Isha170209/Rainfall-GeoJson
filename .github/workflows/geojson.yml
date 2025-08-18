@@ -49,15 +49,9 @@ jobs:
             fi
           fi
 
-          # write manifest.json
-          python3 - <<'PY'
-import json 
-import os
-fn = os.path.basename("data/latest.geojson")
-manifest = {"latest": fn}
-with open("data/manifest.json", "w") as f:
-    json.dump(manifest, f)
-PY
+          # write manifest.json directly
+          LATEST_FN=$(basename data/latest.geojson)
+          echo "{\"latest\": \"${LATEST_FN}\"}" > data/manifest.json
 
       - name: Commit changes
         run: |
