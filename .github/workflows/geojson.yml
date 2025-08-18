@@ -51,7 +51,8 @@ jobs:
 
           # write manifest.json
           python3 - <<'PY'
-import json, os
+import json, 
+import os
 fn = os.path.basename("data/latest.geojson")
 manifest = {"latest": fn}
 with open("data/manifest.json", "w") as f:
