@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>India Rainfall Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header>
+    <h1>India Rainfall — Daily (IMD)</h1>
+    <div id="controls">
+      <select id="stateFilter"><option value="">All States</option></select>
+      <select id="districtFilter"><option value="">All Districts</option></select>
+      <button id="resetBtn">Reset</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="map"></div>
+    <div id="side">
+      <h3 id="fileLabel">Loading latest data...</h3>
+      <canvas id="chart" width="400" height="200"></canvas>
+      <div id="topList"></div>
+    </div>
+  </main>
+
+  <footer>
+    <small>Data: IMD-derived GeoJSON • Auto-updated daily</small>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
