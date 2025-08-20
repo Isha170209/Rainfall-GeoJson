@@ -1,97 +1,59 @@
-/* ===== General Page Styling ===== */
+/* General reset */
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #f4f6f9;
-  color: #333;
+  background-color: #f4f4f4;
 }
 
-/* ===== Header ===== */
-header {
-  background: #0066cc;
-  color: #fff;
-  padding: 15px;
-  text-align: center;
-  font-size: 20px;
-  font-weight: bold;
-}
-
-/* ===== Controls Section ===== */
-#controls {
+/* Filter bar container */
+.filter-bar {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
-  padding: 12px;
-  background: #ffffff;
-  border-bottom: 1px solid #ddd;
-  gap: 12px;
+  background-color: #cc0000; /* Red header bar */
+  padding: 12px 20px; /* Reduced height */
+  color: white;
+  gap: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-#controls label {
-  font-size: 14px;
-  font-weight: 600;
+/* Each filter group (label + dropdown) */
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-#controls select,
-#controls input[type="date"] {
-  padding: 6px 10px;
+/* Labels */
+.filter-group label {
+  font-weight: bold;
   font-size: 14px;
+  color: white;
+}
+
+/* Dropdowns & Date picker */
+.filter-group select,
+.filter-group input[type="date"] {
+  padding: 5px 8px;
+  border-radius: 6px;
   border: 1px solid #ccc;
-  border-radius: 6px;
-  outline: none;
-  transition: border 0.3s ease;
-}
-
-#controls select:focus,
-#controls input[type="date"]:focus {
-  border-color: #0066cc;
-}
-
-/* ===== Apply Button ===== */
-#controls button {
-  background: #0066cc;
-  color: #fff;
-  border: none;
-  padding: 7px 14px;
-  border-radius: 6px;
   font-size: 14px;
+  outline: none;
   cursor: pointer;
-  transition: background 0.3s ease;
 }
 
-#controls button:hover {
-  background: #004c99;
+/* Dropdowns hover/focus */
+.filter-group select:focus,
+.filter-group input[type="date"]:focus {
+  border-color: #b71c1c; /* Darker red on focus */
+  box-shadow: 0 0 4px rgba(183, 28, 28, 0.4);
 }
 
-/* ===== Map Container ===== */
-#map {
-  height: calc(100vh - 120px); /* full height minus header + controls */
-  width: 100%;
-}
-
-/* ===== Footer ===== */
-footer {
-  background: #f1f1f1;
-  text-align: center;
-  padding: 10px;
-  font-size: 13px;
-  color: #555;
-  border-top: 1px solid #ddd;
-}
-
-/* ===== Responsive Design ===== */
+/* For responsiveness */
 @media (max-width: 768px) {
-  #controls {
+  .filter-bar {
     flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-
-  #controls label {
-    margin-bottom: 4px;
-  }
-
-  #map {
-    height: calc(100vh - 180px);
+    align-items: flex-start;
+    gap: 10px;
   }
 }
