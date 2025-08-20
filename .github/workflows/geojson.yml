@@ -39,7 +39,7 @@ jobs:
           name: rainfall-geojson
           path: data/*.geojson
 
-      # Commit GeoJSON + manifest back to repo
+      # ✅ Commit ONLY rainfall GeoJSON + manifest (exclude big tehsil file)
       - name: Commit GeoJSON and manifest
         run: |
           git config user.name "github-actions"
@@ -48,8 +48,11 @@ jobs:
           # Add updated files
           git add data/*.geojson data/manifest.json
 
+          # Exclude large static file (>100MB)
+          git reset data/India_tehsils_clean.geojson
+
           # Commit (skip CI to avoid infinite loops)
-          git commit -m "Update GeoJSON data [skip ci]" || echo "No changes"
+          git commit -m "Update daily rainfall GeoJSON [skip ci]" || echo "No changes"
 
           # Push back to master
           git push origin master
