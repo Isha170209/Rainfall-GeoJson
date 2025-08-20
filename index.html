@@ -1,59 +1,59 @@
-/* General reset */
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background-color: #f4f4f4;
-}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>India Rainfall Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    India Rainfall — Daily (IMD)
+  </header>
 
-/* Filter bar container */
-.filter-bar {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  background-color: #cc0000; /* Red header bar */
-  padding: 12px 20px; /* Reduced height */
-  color: white;
-  gap: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
+  <!-- Controls Section -->
+  <div id="controls">
+    <label for="stateFilter">State:</label>
+    <select id="stateFilter">
+      <option value="">All States</option>
+    </select>
 
-/* Each filter group (label + dropdown) */
-.filter-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+    <label for="districtFilter">District:</label>
+    <select id="districtFilter">
+      <option value="">All Districts</option>
+    </select>
 
-/* Labels */
-.filter-group label {
-  font-weight: bold;
-  font-size: 14px;
-  color: white;
-}
+    <label for="tehsilFilter">Tehsil:</label>
+    <select id="tehsilFilter">
+      <option value="">All Tehsils</option>
+    </select>
 
-/* Dropdowns & Date picker */
-.filter-group select,
-.filter-group input[type="date"] {
-  padding: 5px 8px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  outline: none;
-  cursor: pointer;
-}
+    <label for="dateFilter">Date:</label>
+    <input type="date" id="dateFilter">
 
-/* Dropdowns hover/focus */
-.filter-group select:focus,
-.filter-group input[type="date"]:focus {
-  border-color: #b71c1c; /* Darker red on focus */
-  box-shadow: 0 0 4px rgba(183, 28, 28, 0.4);
-}
+    <button id="resetBtn">Reset</button>
+  </div>
 
-/* For responsiveness */
-@media (max-width: 768px) {
-  .filter-bar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-}
+  <!-- Main Layout -->
+  <main>
+    <div id="map"></div>
+    <div id="side">
+      <h3 id="fileLabel">Loading latest data...</h3>
+      <canvas id="chart" width="400" height="200"></canvas>
+      <div id="topList"></div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <small>Data: IMD-derived GeoJSON • Auto-updated daily</small>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
