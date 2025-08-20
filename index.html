@@ -6,37 +6,37 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* Optional: reduce header height & make red */
+    header {
+      background: red;
+      padding: 10px 0;
+    }
+    #controls select, #controls input[type="date"] {
+      min-width: 120px;
+    }
+  </style>
 </head>
 <body>
-  <!-- Header -->
   <header>
-    India Rainfall — Daily (IMD)
+    <h1>IMD Gridded Rainfall Data Distribution</h1>
+    <div id="controls">
+      <label>State: 
+        <select id="stateFilter"><option value="">All States</option></select>
+      </label>
+      <label>District: 
+        <select id="districtFilter"><option value="">All Districts</option></select>
+      </label>
+      <label>Tehsil: 
+        <select id="tehsilFilter"><option value="">All Tehsils</option></select>
+      </label>
+      <label>Date: 
+        <input type="date" id="dateFilter">
+      </label>
+      <button id="resetBtn">Reset</button>
+    </div>
   </header>
 
-  <!-- Controls Section -->
-  <div id="controls">
-    <label for="stateFilter">State:</label>
-    <select id="stateFilter">
-      <option value="">All States</option>
-    </select>
-
-    <label for="districtFilter">District:</label>
-    <select id="districtFilter">
-      <option value="">All Districts</option>
-    </select>
-
-    <label for="tehsilFilter">Tehsil:</label>
-    <select id="tehsilFilter">
-      <option value="">All Tehsils</option>
-    </select>
-
-    <label for="dateFilter">Date:</label>
-    <input type="date" id="dateFilter">
-
-    <button id="resetBtn">Reset</button>
-  </div>
-
-  <!-- Main Layout -->
   <main>
     <div id="map"></div>
     <div id="side">
@@ -46,12 +46,10 @@
     </div>
   </main>
 
-  <!-- Footer -->
   <footer>
     <small>Data: IMD-derived GeoJSON • Auto-updated daily</small>
   </footer>
 
-  <!-- Scripts -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="js/app.js"></script>
