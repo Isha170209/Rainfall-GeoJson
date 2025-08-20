@@ -14,6 +14,7 @@
   // UI elements
   const stateFilter = document.getElementById('stateFilter');
   const districtFilter = document.getElementById('districtFilter');
+  const dateFilter = document.getElementById('dateFilter');   // ✅ fixed
   const resetBtn = document.getElementById('resetBtn');
   const fileLabel = document.getElementById('fileLabel');
   const chartCtx = document.getElementById('chart').getContext('2d');
@@ -37,7 +38,26 @@
     return Math.min(18, 4 + Math.sqrt(mm));
   }
 
-  // try manifest, else load latest.geojson
+  // load specific date file
+  async function loadDataForDate(isoDate) {
+    const url = dataBase + isoDate + ".geojson";
+    fileLabel.innerText = "Loading " + isoDate + ".geojson...";
+
+    try {
+      const res = await fetch(url + "?cache=" + Date.now());
+      if (!res.ok) throw new Error("No data for " + isoDate);
+
+      const gjson = await res.json();
+      geojsonData = gjson;
+      fileLabel.innerText = "Data: " + isoDate + ".geojson";
+      renderData(geojsonData);
+    } catch (err) {
+      fileLabel.innerText = "No data found for " + isoDate;
+      console.warn(err);
+    }
+  }
+
+  // default load: use manifest or latest.geojson
   async function loadData(){
     try {
       const mres = await fetch(manifestUrl + cacheBust);
@@ -175,6 +195,15 @@
         plugins: { legend: { display: false } }
       }
     });
+  }
+
+  // ✅ hook date filter to loadDataForDate
+  if (dateFilter){
+    dateFilter.onchange = () => {
+      if (dateFilter.value){
+        loadDataForDate(dateFilter.value); // expects YYYY-MM-DD string
+      }
+    };
   }
 
 })();
