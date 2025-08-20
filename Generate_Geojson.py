@@ -109,10 +109,22 @@ gdf.to_file(output_rain_geojson, driver='GeoJSON')
 print(f"✅ Rainfall GeoJSON saved to: {output_rain_geojson} with {len(gdf)} features.")
 
 # === Create/Update Manifest JSON ===
-manifest = {
-    "latest": os.path.basename(output_rain_geojson),  # e.g., India_rainfall_2025-08-17.geojson
-    "generated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-}
+dated_filename = f"{yesterday}.geojson"
+dated_filepath = os.path.join("data", dated_filename)
+
+# Rename/copy rainfall file to date-only name
+os.rename(output_rain_geojson, dated_filepath)
+
+# Load existing manifest if it exists
+if os.path.exists(manifest_path):
+    with open(manifest_path, "r") as f:
+        manifest = json.load(f)
+else:
+    manifest = {}
+
+# Update manifest with new entry + latest pointer
+manifest[yesterday] = dated_filename
+manifest["latest"] = dated_filename
 
 with open(manifest_path, "w") as f:
     json.dump(manifest, f, indent=2)
