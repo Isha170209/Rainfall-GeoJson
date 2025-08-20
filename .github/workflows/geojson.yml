@@ -41,7 +41,7 @@ jobs:
           set -e
           mkdir -p data
           YESTERDAY=$(date -d '1 day ago' +%F)
-          SRC="data/India_rainfall_${YESTERDAY}.geojson"
+          SRC="data/${YESTERDAY}.geojson"
 
           if [ -f "$SRC" ]; then
             cp "$SRC" "data/latest.geojson"
