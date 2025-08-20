@@ -30,7 +30,7 @@ jobs:
           pip install pandas geopandas shapely pyproj fiona requests gdown
 
       - name: Run GeoJSON Conversion Script
-        run: python Generate_GeoJson.py
+        run: python ./Generate_GeoJson.py
 
       # (Optional) Save artifacts for debugging
       - name: Upload geojson artifacts
