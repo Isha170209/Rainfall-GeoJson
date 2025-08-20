@@ -119,9 +119,14 @@
         color: '#222',
         weight: 0.6,
         fillOpacity: 0.8
-      }).bindPopup(`<b>${pt.props.District || ''}, ${pt.props.Tehsil || ''}</b><br/>
-                    Rain: ${pt.props.Rainfall} mm<br/>
-                    Date: ${pt.props.Date || ''}`);
+      }).bindPopup(`<State: ${f.State}<br>` +
+        `District: ${f.District}<br>` +
+        `Tehsil: ${f.Tehsil}<br>` +
+        `Date: ${f.Date}<br>` +
+        `Rainfall: ${f.Rainfall} mm<br>` +
+        `Lat: ${f.Lat}, `  +
+        `Lon: ${f.Lon}` 
+       );
       circle.feature = pt; // store for filtering
       markersLayer.addLayer(circle);
     });
