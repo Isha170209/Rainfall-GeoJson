@@ -112,21 +112,17 @@ print(f"✅ Rainfall GeoJSON saved to: {output_rain_geojson} with {len(gdf)} fea
 dated_filename = f"{yesterday}.geojson"
 dated_filepath = os.path.join("data", dated_filename)
 
-# Rename/copy rainfall file to date-only name
-os.rename(output_rain_geojson, dated_filepath)
+# Ensure correct filename
+if output_rain_geojson != dated_filepath:
+    os.rename(output_rain_geojson, dated_filepath)
 
-# Load existing manifest if it exists
-if os.path.exists(manifest_path):
-    with open(manifest_path, "r") as f:
-        manifest = json.load(f)
-else:
-    manifest = {}
-
-# Update manifest with new entry + latest pointer
-manifest[yesterday] = dated_filename
-manifest["latest"] = dated_filename
+# Manifest only keeps "latest" and "updated"
+manifest = {
+    "latest": dated_filename,
+    "updated": datetime.now().strftime("%Y-%m-%d")
+}
 
 with open(manifest_path, "w") as f:
     json.dump(manifest, f, indent=2)
 
-print(f"📄 Manifest updated: {manifest_path}")
+print(f"📄 Manifest written with latest={dated_filename}, updated={manifest['updated']}")
