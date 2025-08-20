@@ -204,7 +204,7 @@
     });
   }
 
-  // ✅ hook date filter to loadDataForDate
+  // hook date filter to loadDataForDate
   if (dateFilter){
     dateFilter.onchange = () => {
       if (dateFilter.value){
