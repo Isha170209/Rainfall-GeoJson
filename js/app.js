@@ -16,7 +16,7 @@
   // UI elements
   const stateFilter = document.getElementById('stateFilter');
   const districtFilter = document.getElementById('districtFilter');
-  const dateFilter = document.getElementById('dateFilter');   // ✅ fixed
+  const dateFilter = document.getElementById('dateFilter');
   const resetBtn = document.getElementById('resetBtn');
   const fileLabel = document.getElementById('fileLabel');
   const chartCtx = document.getElementById('chart').getContext('2d');
@@ -25,7 +25,7 @@
   let geojsonData = null;
   let markersLayer = L.layerGroup().addTo(map);
 
-  // color scale by rainfall (mm) - simple ramp
+  // color scale by rainfall (mm)
   function colorForRain(mm){
     if (mm === null || isNaN(mm)) return '#ccc';
     if (mm === 0) return '#f7fbff';
@@ -40,15 +40,13 @@
     return Math.min(18, 4 + Math.sqrt(mm));
   }
 
-  // load specific date file
+  // Load data for a specific date
   async function loadDataForDate(isoDate) {
     const url = dataBase + isoDate + ".geojson";
     fileLabel.innerText = "Loading " + isoDate + ".geojson...";
-
     try {
       const res = await fetch(url + "?cache=" + Date.now());
       if (!res.ok) throw new Error("No data for " + isoDate);
-
       const gjson = await res.json();
       geojsonData = gjson;
       fileLabel.innerText = "Data: " + isoDate + ".geojson";
@@ -59,7 +57,7 @@
     }
   }
 
-  // default load: use manifest or latest.geojson
+  // Default load: manifest or latest.geojson
   async function loadData(){
     try {
       const mres = await fetch(manifestUrl + cacheBust);
@@ -68,9 +66,7 @@
         const url = dataBase + (m.latest || 'latest.geojson');
         return {url, meta: m};
       }
-    } catch(e){ /* no manifest */ }
-
-    // fallback
+    } catch(e){ }
     return {url: latestFallback + cacheBust};
   }
 
@@ -91,26 +87,23 @@
   function renderData(gjson){
     markersLayer.clearLayers();
 
-    // derive lists for filters
     const states = new Set(), districts = new Set();
     const points = [];
 
     gjson.features.forEach(f => {
-      const p = f.geometry && f.geometry.coordinates ? [f.geometry.coordinates[1], f.geometry.coordinates[0]] : null;
+      const coords = f.geometry && f.geometry.coordinates ? [f.geometry.coordinates[1], f.geometry.coordinates[0]] : null;
       const props = f.properties || {};
       const rain = parseFloat(props.Rainfall);
       const state = props.State || props.state || '';
       const district = props.District || props.district || '';
-      states.add(state); districts.add(district);
-
-      points.push({latlng: p, props, rain, state, district});
+      states.add(state);
+      districts.add(district);
+      points.push({latlng: coords, props, rain, state, district});
     });
 
-    // populate filters
     populateSelect(stateFilter, ['', ...Array.from(states).sort()]);
     populateSelect(districtFilter, ['', ...Array.from(districts).sort()]);
 
-    // draw markers
     points.forEach(pt => {
       if(!pt.latlng) return;
       const circle = L.circleMarker(pt.latlng, {
@@ -119,34 +112,30 @@
         color: '#222',
         weight: 0.6,
         fillOpacity: 0.8
-      }).bindPopup(`<State: ${f.State}<br>` +
-        `District: ${f.District}<br>` +
-        `Tehsil: ${f.Tehsil}<br>` +
-        `Date: ${f.Date}<br>` +
-        `Rainfall: ${f.Rainfall} mm<br>` +
-        `Lat: ${f.Lat}, `  +
-        `Lon: ${f.Lon}` 
-       );
-      circle.feature = pt; // store for filtering
+      }).bindPopup(
+        `<b>State:</b> ${pt.props.State || pt.props.state || ''}<br>` +
+        `<b>District:</b> ${pt.props.District || pt.props.district || ''}<br>` +
+        `<b>Tehsil:</b> ${pt.props.Tehsil || ''}<br>` +
+        `<b>Date:</b> ${pt.props.Date || ''}<br>` +
+        `<b>Rainfall:</b> ${pt.props.Rainfall} mm<br>` +
+        `Lat: ${pt.latlng[0]}, Lon: ${pt.latlng[1]}`
+      );
+      circle.feature = pt;
       markersLayer.addLayer(circle);
     });
 
-    // fit to markers
     if (markersLayer.getLayers().length) {
       map.fitBounds(markersLayer.getBounds().pad(0.2));
     }
 
-    // show top N rainfall in chart & list
     showTopChart(points);
 
-    // hook filter events
     stateFilter.onchange = applyFilters;
     districtFilter.onchange = applyFilters;
     resetBtn.onclick = () => { stateFilter.value=''; districtFilter.value=''; applyFilters(); };
   }
 
   function populateSelect(selectEl, items){
-    // items = array; first item assumed '' for All
     selectEl.innerHTML = '';
     items.forEach(i => {
       const opt = document.createElement('option');
@@ -160,7 +149,6 @@
     const s = stateFilter.value, d = districtFilter.value;
     markersLayer.eachLayer(layer => {
       const pt = layer.feature;
-      if(!pt) { layer.addTo(map); return; }
       let show = true;
       if (s && pt.state !== s) show = false;
       if (d && pt.district !== d) show = false;
@@ -169,12 +157,10 @@
   }
 
   function showTopChart(points){
-    // top 20 by rainfall
     const sorted = points.filter(p => !isNaN(p.rain)).sort((a,b)=> b.rain - a.rain).slice(0,20);
-    const labels = sorted.map((p,i)=> (p.props.District||'') + ' / ' + (p.props.Tehsil||''));
+    const labels = sorted.map(p=> (p.props.District||'') + ' / ' + (p.props.Tehsil||''));
     const values = sorted.map(p=> p.rain);
 
-    // list
     topList.innerHTML = '';
     sorted.forEach(p=>{
       const el = document.createElement('div');
@@ -183,32 +169,18 @@
       topList.appendChild(el);
     });
 
-    // Chart.js
     if (window.topChart) window.topChart.destroy();
     window.topChart = new Chart(chartCtx, {
       type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Rainfall (mm)',
-          data: values,
-          backgroundColor: values.map(v => colorForRain(v))
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: 'y',
-        plugins: { legend: { display: false } }
-      }
+      data: { labels, datasets: [{ label:'Rainfall (mm)', data: values, backgroundColor: values.map(v=> colorForRain(v)) }] },
+      options: { responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}} }
     });
   }
 
-  // hook date filter to loadDataForDate
   if (dateFilter){
     dateFilter.onchange = () => {
       if (dateFilter.value){
-        loadDataForDate(dateFilter.value); // expects YYYY-MM-DD string
+        loadDataForDate(dateFilter.value);
       }
     };
   }
