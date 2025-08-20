@@ -35,13 +35,20 @@
   let markersLayer = L.layerGroup().addTo(map);
 
   // color scale by rainfall (mm)
+  const colorScale = [
+    {limit: 0, color:'#f7fbff'},
+    {limit: 5, color:'#c6dbef'},
+    {limit: 20, color:'#6baed6'},
+    {limit: 50, color:'#2171b5'},
+    {limit: 100, color:'#08519c'},
+    {limit: Infinity, color:'#08306b'}
+  ];
+
   function colorForRain(mm){
     if (mm === null || isNaN(mm)) return '#ccc';
-    if (mm === 0) return '#f7fbff';
-    if (mm < 5) return '#c6dbef';
-    if (mm < 20) return '#6baed6';
-    if (mm < 50) return '#2171b5';
-    if (mm < 100) return '#08519c';
+    for(let i=0; i<colorScale.length; i++){
+      if(mm < colorScale[i].limit) return colorScale[i].color;
+    }
     return '#08306b';
   }
 
@@ -53,17 +60,14 @@
   // load specific date file
   async function loadDataForDate(isoDate) {
     const url = dataBase + isoDate + ".geojson";
-    fileLabel.innerText = "Loading " + isoDate + ".geojson...";
     try {
       const res = await fetch(url + "?cache=" + Date.now());
       if (!res.ok) throw new Error("No data for " + isoDate);
       const gjson = await res.json();
       geojsonData = gjson;
       originalData = gjson; // store original
-      fileLabel.innerText = "Data: " + isoDate + ".geojson";
       renderData(geojsonData);
     } catch (err) {
-      fileLabel.innerText = "No data found for " + isoDate;
       console.warn(err);
     }
   }
@@ -78,23 +82,17 @@
         return {url, meta: m};
       }
     } catch(e){ /* no manifest */ }
-
-    // fallback
     return {url: latestFallback + cacheBust};
   }
 
-  const {url, meta} = await loadData();
-  fileLabel.innerText = 'Loading ' + (meta && meta.latest ? meta.latest : 'latest.geojson');
-
+  const {url} = await loadData();
   try {
     const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'cache=' + Date.now());
     if (!res.ok) throw new Error('Failed to load geojson');
     geojsonData = await res.json();
     originalData = geojsonData; // store original for reset
-    fileLabel.innerText = 'Data: ' + (meta && meta.latest ? meta.latest : 'latest.geojson');
     renderData(geojsonData);
   } catch(err){
-    fileLabel.innerText = 'Unable to load data';
     console.error(err);
   }
 
@@ -150,18 +148,6 @@
       opt.value = i;
       opt.text = i || 'All';
       selectEl.appendChild(opt);
-    });
-  }
-
-  function applyFilters(){
-    const s = stateFilter.value, d = districtFilter.value;
-    markersLayer.eachLayer(layer => {
-      const pt = layer.feature;
-      if(!pt) { layer.addTo(map); return; }
-      let show = true;
-      if (s && pt.state !== s) show = false;
-      if (d && pt.district !== d) show = false;
-      if (show) layer.addTo(map); else map.removeLayer(layer);
     });
   }
 
@@ -226,5 +212,27 @@
     districtFilter.value = '';
     dateFilter.value = '';
   };
+
+  // Add static footer text
+  const footer = document.querySelector('footer');
+  footer.innerHTML = '<small>Data: IMD-derived GeoJSON • Auto-updated daily</small>';
+
+  // Add legend bottom-left
+  const legend = L.control({position: 'bottomleft'});
+  legend.onAdd = function(map){
+    const div = L.DomUtil.create('div', 'info legend');
+    div.style.background = '#fff';
+    div.style.padding = '8px';
+    div.style.borderRadius = '6px';
+    div.style.boxShadow = '0 0 6px rgba(0,0,0,0.3)';
+    let labels = [];
+    colorScale.forEach((item,i) => {
+      const range = i===0 ? `0` : `${colorScale[i-1].limit} - ${item.limit-1}`;
+      labels.push(`<i style="background:${item.color};width:18px;height:18px;display:inline-block;margin-right:6px;"></i> ${range} mm`);
+    });
+    div.innerHTML = '<b>Rainfall Legend</b><br>' + labels.join('<br>');
+    return div;
+  };
+  legend.addTo(map);
 
 })();
