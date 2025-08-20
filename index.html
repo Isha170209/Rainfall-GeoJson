@@ -11,18 +11,27 @@
   <header>
     <h1>IMD Gridded Rainfall Data Distribution</h1>
     <div id="controls">
-      <label>State: 
+      <div class="filterTab">
+        <label for="stateFilter">State:</label>
         <select id="stateFilter"><option value="">All States</option></select>
-      </label>
-      <label>District: 
+      </div>
+
+      <div class="filterTab">
+        <label for="districtFilter">District:</label>
         <select id="districtFilter"><option value="">All Districts</option></select>
-      </label>
-      <label>Tehsil: 
+      </div>
+
+      <div class="filterTab">
+        <label for="tehsilFilter">Tehsil:</label>
         <select id="tehsilFilter"><option value="">All Tehsils</option></select>
-      </label>
-      <label>Date: 
+      </div>
+
+      <div class="filterTab">
+        <label for="dateFilter">Date:</label>
         <input type="date" id="dateFilter">
-      </label>
+      </div>
+
+      <button id="submitBtn">Submit</button>
       <button id="resetBtn">Reset</button>
     </div>
   </header>
@@ -30,7 +39,6 @@
   <main>
     <div id="map"></div>
     <div id="side">
-      <h3 id="fileLabel">Loading latest data...</h3>
       <canvas id="chart" width="400" height="200"></canvas>
       <div id="topList"></div>
     </div>
