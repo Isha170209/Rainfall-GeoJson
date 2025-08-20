@@ -33,7 +33,7 @@ yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 rain_csv_path = f"data/rain_merged_{yesterday}.csv"
 
 # === Output Paths ===
-output_rain_geojson = f"data/India_rainfall_{yesterday}.geojson"
+output_rain_geojson = f"data/{yesterday}.geojson"
 output_tehsil_geojson = f"data/India_tehsils_clean.geojson"
 manifest_path = "data/manifest.json"
 
