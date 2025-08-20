@@ -29,6 +29,13 @@ jobs:
       - name: Run GeoJSON Conversion Script
         run: python Generate_Geojson.py
 
+      # ✅ ADD ARTIFACT UPLOAD STEP HERE
+      - name: Upload geojson artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rainfall-geojson
+          path: data/*.geojson
+
       - name: Copy latest GeoJSON into root data/ and update manifest
         run: |
           set -e
