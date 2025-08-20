@@ -7,8 +7,8 @@
 
   // Setup map
   const map = L.map('map').setView([22.5, 79], 5);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; CartoDB'
   }).addTo(map);
 
   // UI elements
