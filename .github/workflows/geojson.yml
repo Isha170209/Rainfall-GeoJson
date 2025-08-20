@@ -36,29 +36,29 @@ jobs:
           name: rainfall-geojson
           path: data/*.geojson
 
-      - name: Copy latest GeoJSON into root data/ and update manifest
-        run: |
-          set -e
-          mkdir -p data
-          YESTERDAY=$(date -d '1 day ago' +%F)
-          SRC="data/${YESTERDAY}.geojson"
+      #- name: Copy latest GeoJSON into root data/ and update manifest
+       # run: |
+        #  set -e
+         # mkdir -p data
+          #YESTERDAY=$(date -d '1 day ago' +%F)
+          #SRC="data/${YESTERDAY}.geojson"
 
-          if [ -f "$SRC" ]; then
-            cp "$SRC" "data/latest.geojson"
-            echo "Copied $SRC to data/latest.geojson"
-          else
-            LATEST=$(ls -1 data/India_rainfall_*.geojson 2>/dev/null | tail -n 1 || true)
-            if [ -n "$LATEST" ]; then
-              cp "$LATEST" "data/latest.geojson"
-              echo "Copied fallback: $LATEST"
-            else
-              echo "No geojson found in data/ to copy."
-            fi
-          fi
+          #if [ -f "$SRC" ]; then
+          #  cp "$SRC" "data/latest.geojson"
+           # echo "Copied $SRC to data/latest.geojson"
+          #else
+           # LATEST=$(ls -1 data/India_rainfall_*.geojson 2>/dev/null | tail -n 1 || true)
+            #if [ -n "$LATEST" ]; then
+             # cp "$LATEST" "data/latest.geojson"
+              #echo "Copied fallback: $LATEST"
+            #else
+             # echo "No geojson found in data/ to copy."
+            #fi
+          #fi
 
           # write manifest.json directly
-          LATEST_FN=$(basename data/latest.geojson)
-          echo "{\"latest\": \"${LATEST_FN}\"}" > data/manifest.json
+          #LATEST_FN=$(basename data/latest.geojson)
+          #echo "{\"latest\": \"${LATEST_FN}\"}" > data/manifest.json
 
       - name: Commit changes
         run: |
