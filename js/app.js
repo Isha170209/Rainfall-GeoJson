@@ -1,3 +1,4 @@
+// dashboard/js/app.js
 (async function(){
   const dataBase = 'data/';
   const manifestUrl = dataBase + 'manifest.json';
@@ -15,16 +16,25 @@
   // UI elements
   const stateFilter = document.getElementById('stateFilter');
   const districtFilter = document.getElementById('districtFilter');
-  const tehsilFilter = document.getElementById('tehsilFilter'); // new
-  const dateFilter = document.getElementById('dateFilter');   
+  const dateFilter = document.getElementById('dateFilter');
   const resetBtn = document.getElementById('resetBtn');
   const fileLabel = document.getElementById('fileLabel');
   const chartCtx = document.getElementById('chart').getContext('2d');
   const topList = document.getElementById('topList');
 
+  // create submit button dynamically
+  const submitBtn = document.createElement('button');
+  submitBtn.textContent = 'Submit';
+  submitBtn.style.marginLeft = '8px';
+  submitBtn.id = 'submitBtn';
+  document.getElementById('controls').appendChild(submitBtn);
+  resetBtn.style.marginLeft = '4px'; // adjust spacing
+
   let geojsonData = null;
+  let originalData = null; // store original data for reset
   let markersLayer = L.layerGroup().addTo(map);
 
+  // color scale by rainfall (mm)
   function colorForRain(mm){
     if (mm === null || isNaN(mm)) return '#ccc';
     if (mm === 0) return '#f7fbff';
@@ -34,18 +44,22 @@
     if (mm < 100) return '#08519c';
     return '#08306b';
   }
+
   function radiusForRain(mm){
     if (mm === null || isNaN(mm)) return 4;
     return Math.min(18, 4 + Math.sqrt(mm));
   }
 
+  // load specific date file
   async function loadDataForDate(isoDate) {
     const url = dataBase + isoDate + ".geojson";
     fileLabel.innerText = "Loading " + isoDate + ".geojson...";
     try {
       const res = await fetch(url + "?cache=" + Date.now());
       if (!res.ok) throw new Error("No data for " + isoDate);
-      geojsonData = await res.json();
+      const gjson = await res.json();
+      geojsonData = gjson;
+      originalData = gjson; // store original
       fileLabel.innerText = "Data: " + isoDate + ".geojson";
       renderData(geojsonData);
     } catch (err) {
@@ -54,6 +68,7 @@
     }
   }
 
+  // default load: use manifest or latest.geojson
   async function loadData(){
     try {
       const mres = await fetch(manifestUrl + cacheBust);
@@ -62,7 +77,9 @@
         const url = dataBase + (m.latest || 'latest.geojson');
         return {url, meta: m};
       }
-    } catch(e){ }
+    } catch(e){ /* no manifest */ }
+
+    // fallback
     return {url: latestFallback + cacheBust};
   }
 
@@ -73,6 +90,7 @@
     const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'cache=' + Date.now());
     if (!res.ok) throw new Error('Failed to load geojson');
     geojsonData = await res.json();
+    originalData = geojsonData; // store original for reset
     fileLabel.innerText = 'Data: ' + (meta && meta.latest ? meta.latest : 'latest.geojson');
     renderData(geojsonData);
   } catch(err){
@@ -80,28 +98,25 @@
     console.error(err);
   }
 
+  // render data on map, chart, and top list
   function renderData(gjson){
     markersLayer.clearLayers();
-
-    const states = new Set(), districts = new Set(), tehsils = new Set();
+    const states = new Set(), districts = new Set();
     const points = [];
 
     gjson.features.forEach(f => {
-      const coords = f.geometry && f.geometry.coordinates ? [f.geometry.coordinates[1], f.geometry.coordinates[0]] : null;
+      const p = f.geometry && f.geometry.coordinates ? [f.geometry.coordinates[1], f.geometry.coordinates[0]] : null;
       const props = f.properties || {};
       const rain = parseFloat(props.Rainfall);
       const state = props.State || props.state || '';
       const district = props.District || props.district || '';
-      const tehsil = props.Tehsil || props.tehsil || '';
-      states.add(state); districts.add(district); tehsils.add(tehsil);
-
-      points.push({latlng: coords, props, rain, state, district, tehsil});
+      states.add(state); districts.add(district);
+      points.push({latlng: p, props, rain, state, district});
     });
 
-    // populate filters
+    // populate dropdowns
     populateSelect(stateFilter, ['', ...Array.from(states).sort()]);
     populateSelect(districtFilter, ['', ...Array.from(districts).sort()]);
-    if(tehsilFilter) populateSelect(tehsilFilter, ['', ...Array.from(tehsils).sort()]);
 
     // draw markers
     points.forEach(pt => {
@@ -112,23 +127,20 @@
         color: '#222',
         weight: 0.6,
         fillOpacity: 0.8
-      }).bindPopup(`<b>${pt.props.State || ''} / ${pt.props.District || ''} / ${pt.props.Tehsil || ''}</b><br/>
-                    Rain: ${pt.props.Rainfall} mm<br/>
-                    Date: ${pt.props.Date || ''}`);
-      circle.feature = pt;
+      }).bindPopup(`<b>${pt.props.State || ''} / ${pt.props.District || ''} / ${pt.props.Tehsil || ''}</b><br>
+                    Date: ${pt.props.Date || ''}<br>
+                    Rainfall: ${pt.props.Rainfall} mm`);
+      circle.feature = pt; // store for filtering
       markersLayer.addLayer(circle);
     });
 
+    // fit to markers
     if (markersLayer.getLayers().length) {
       map.fitBounds(markersLayer.getBounds().pad(0.2));
     }
 
+    // show top chart & list
     showTopChart(points);
-
-    stateFilter.onchange = applyFilters;
-    districtFilter.onchange = applyFilters;
-    if(tehsilFilter) tehsilFilter.onchange = applyFilters;
-    resetBtn.onclick = () => { stateFilter.value=''; districtFilter.value=''; if(tehsilFilter) tehsilFilter.value=''; applyFilters(); };
   }
 
   function populateSelect(selectEl, items){
@@ -142,33 +154,15 @@
   }
 
   function applyFilters(){
-    const s = stateFilter.value, d = districtFilter.value, t = tehsilFilter ? tehsilFilter.value : '';
+    const s = stateFilter.value, d = districtFilter.value;
     markersLayer.eachLayer(layer => {
       const pt = layer.feature;
       if(!pt) { layer.addTo(map); return; }
       let show = true;
       if (s && pt.state !== s) show = false;
       if (d && pt.district !== d) show = false;
-      if (t && pt.tehsil !== t) show = false;
-      if(show) layer.addTo(map); else map.removeLayer(layer);
+      if (show) layer.addTo(map); else map.removeLayer(layer);
     });
-
-    // cascading: filter next dropdowns
-    if(s) filterOptions(districtFilter, 'district', s);
-    if(d && tehsilFilter) filterOptions(tehsilFilter, 'tehsil', d);
-  }
-
-  function filterOptions(selectEl, key, parentVal){
-    if(!geojsonData) return;
-    const options = new Set();
-    geojsonData.features.forEach(f => {
-      const props = f.properties || {};
-      if(key==='district' && (props.State||props.state)===parentVal) options.add(props.District||props.district);
-      if(key==='tehsil' && (props.District||props.district)===parentVal) options.add(props.Tehsil||props.tehsil);
-    });
-    const prev = selectEl.value;
-    populateSelect(selectEl, ['', ...Array.from(options).sort()]);
-    if([...options].includes(prev)) selectEl.value = prev;
   }
 
   function showTopChart(points){
@@ -187,15 +181,50 @@
     if (window.topChart) window.topChart.destroy();
     window.topChart = new Chart(chartCtx, {
       type: 'bar',
-      data: { labels, datasets: [{label:'Rainfall (mm)', data: values, backgroundColor: values.map(v => colorForRain(v))}] },
-      options: { responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{ legend:{ display:false } } }
+      data: { labels, datasets: [{ label: 'Rainfall (mm)', data: values, backgroundColor: values.map(v=> colorForRain(v)) }] },
+      options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } } }
     });
   }
 
+  // hook date picker to loadDataForDate
   if (dateFilter){
     dateFilter.onchange = () => {
       if (dateFilter.value) loadDataForDate(dateFilter.value);
     };
   }
+
+  // Submit button: filter by state, district, date
+  submitBtn.onclick = () => {
+    if (!geojsonData) return;
+
+    const s = stateFilter.value;
+    const d = districtFilter.value;
+    const dt = dateFilter.value;
+
+    const filteredFeatures = geojsonData.features.filter(f => {
+      const props = f.properties || {};
+      let match = true;
+      if (s && props.State !== s) match = false;
+      if (d && props.District !== d) match = false;
+      if (dt && props.Date !== dt) match = false;
+      return match;
+    });
+
+    if (filteredFeatures.length === 0) {
+      alert('No data for selected combination.');
+      return;
+    }
+
+    const filteredData = { type: 'FeatureCollection', features: filteredFeatures };
+    renderData(filteredData);
+  };
+
+  // Reset button
+  resetBtn.onclick = () => {
+    if (originalData) renderData(originalData);
+    stateFilter.value = '';
+    districtFilter.value = '';
+    dateFilter.value = '';
+  };
 
 })();
