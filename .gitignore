@@ -17,3 +17,7 @@ __pycache__/
 
 # Jupyter
 *.ipynb_checkpoints/
+
+# Allow geojson + manifest inside data/
+!data/*.geojson
+!data/manifest.json
