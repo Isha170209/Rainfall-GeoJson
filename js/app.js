@@ -13,7 +13,7 @@
     maxZoom: 20
   }).addTo(map);
 
-  //  NEW: layer for grid rectangles
+  // NEW: layer for grid rectangles
   let gridLayer = L.layerGroup().addTo(map);
 
   // UI
@@ -21,17 +21,6 @@
   const districtFilter= document.getElementById('districtFilter');
   const tehsilFilter  = document.getElementById('tehsilFilter');
   const dateFilter    = document.getElementById('dateFilter');
-
-  // NEW: toggle for checker grid
-  const gridToggle = document.createElement("input");
-  gridToggle.type = "checkbox";
-  gridToggle.id = "gridToggle";
-  gridToggle.style.marginLeft = "8px";
-  const gridLabel = document.createElement("label");
-  gridLabel.setAttribute("for", "gridToggle");
-  gridLabel.textContent = " Show Grid";
-  document.getElementById("controls").appendChild(gridToggle);
-  document.getElementById("controls").appendChild(gridLabel);
 
   // Layers / data
   let baseData = null;         
@@ -270,6 +259,41 @@
     return div;
   };
   legend.addTo(map);
+
+  // NEW: Grid toggle as Leaflet control
+  let gridToggle;
+  const gridControl = L.control({ position: "topright" });
+  gridControl.onAdd = function () {
+    const div = L.DomUtil.create("div", "leaflet-bar");
+    div.style.background = "#fff";
+    div.style.padding = "8px";
+    div.style.borderRadius = "6px";
+    div.style.boxShadow = "0 0 4px rgba(0,0,0,0.3)";
+    div.style.fontSize = "13px";
+
+    const title = document.createElement("div");
+    title.innerHTML = "<b>0.25° x 0.25°<br/>Resolution Grid</b>";
+    title.style.textAlign = "center";
+    title.style.marginBottom = "6px";
+    div.appendChild(title);
+
+    gridToggle = document.createElement("input");
+    gridToggle.type = "checkbox";
+    gridToggle.id = "gridToggle";
+
+    const label = document.createElement("label");
+    label.setAttribute("for", "gridToggle");
+    label.textContent = " Show Grid";
+    label.style.marginLeft = "4px";
+
+    const line = document.createElement("div");
+    line.appendChild(gridToggle);
+    line.appendChild(label);
+    div.appendChild(line);
+
+    return div;
+  };
+  gridControl.addTo(map);
 
   // === INITIAL LOAD ===
   await loadBaseData();

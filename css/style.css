@@ -129,6 +129,37 @@ footer {
   border: 1px solid #ccc;
 }
 
+/* ===== NEW: Grid Toggle Control ===== */
+.leaflet-control.grid-toggle-control {
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  box-shadow: 0 0 6px rgba(0,0,0,0.2);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.grid-toggle-title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 6px;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 4px;
+}
+
+.grid-toggle-control label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.grid-toggle-control input[type="checkbox"] {
+  accent-color: #cc0000;
+  cursor: pointer;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   #controls {
