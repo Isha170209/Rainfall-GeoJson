@@ -18,8 +18,6 @@
   const districtFilter= document.getElementById('districtFilter');
   const tehsilFilter  = document.getElementById('tehsilFilter');
   const dateFilter    = document.getElementById('dateFilter');
-  const submitBtn     = document.getElementById('submitBtn');
-  const resetBtn      = document.getElementById('resetBtn');
 
   // Layers / data
   let baseData = null;         
@@ -221,48 +219,4 @@
   setupCascading(baseLookups);
   renderMarkers(allPoints);
 
-  // === SUBMIT ===
-  submitBtn.onclick = async () => {
-    const selectedDate = dateFilter.value.trim();
-    let data = baseData;
-
-    if (selectedDate) {
-      try {
-        const res = await fetch(`${dataBase}${selectedDate}.geojson?cache=${Date.now()}`);
-        if (res.ok) data = await res.json();
-      } catch (e) {}
-    }
-
-    const lk = ingestData(data);
-    allPoints = lk.points;
-    populateSelect(stateFilter, [...lk.states].sort(), 'All States');
-    populateSelect(districtFilter, [...lk.districts].sort(), 'All Districts');
-    populateSelect(tehsilFilter, [...lk.tehsils].sort(), 'All Tehsils');
-    setupCascading(lk);
-
-    const pts = filteredPoints();
-    renderMarkers(pts);
-    if (!pts.length) {
-      map.setView([22.5, 79], 5);
-      alert('No points match the current filters.');
-    }
-  };
-
-  // === RESET ===
-  resetBtn.onclick = () => {
-    stateFilter.value = '';
-    districtFilter.value = '';
-    tehsilFilter.value = '';
-    dateFilter.value = '';
-
-    const lk = ingestData(baseData);
-    allPoints = lk.points;
-    populateSelect(stateFilter, [...lk.states].sort(), 'All States');
-    populateSelect(districtFilter, [...lk.districts].sort(), 'All Districts');
-    populateSelect(tehsilFilter, [...lk.tehsils].sort(), 'All Tehsils');
-    setupCascading(lk);
-
-    renderMarkers(allPoints);
-    map.setView([22.5, 79], 5);
-  };
-})();
+  
