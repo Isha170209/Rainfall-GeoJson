@@ -147,3 +147,13 @@ footer {
     height: calc(100vh - 120px - 300px);
   }
 }
+/* ===== Remove Sidebar ===== */
+#side {
+  display: none !important;
+}
+
+/* Make map take full width */
+#map {
+  width: 100% !important;
+}
+
