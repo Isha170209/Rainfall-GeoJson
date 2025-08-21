@@ -13,11 +13,25 @@
     maxZoom: 20
   }).addTo(map);
 
+  //  NEW: layer for grid rectangles
+  let gridLayer = L.layerGroup().addTo(map);
+
   // UI
   const stateFilter   = document.getElementById('stateFilter');
   const districtFilter= document.getElementById('districtFilter');
   const tehsilFilter  = document.getElementById('tehsilFilter');
   const dateFilter    = document.getElementById('dateFilter');
+
+  // NEW: toggle for checker grid
+  const gridToggle = document.createElement("input");
+  gridToggle.type = "checkbox";
+  gridToggle.id = "gridToggle";
+  gridToggle.style.marginLeft = "8px";
+  const gridLabel = document.createElement("label");
+  gridLabel.setAttribute("for", "gridToggle");
+  gridLabel.textContent = " Show Grid";
+  document.getElementById("controls").appendChild(gridToggle);
+  document.getElementById("controls").appendChild(gridLabel);
 
   // Layers / data
   let baseData = null;         
@@ -117,8 +131,12 @@
   // Render points (autozoom enabled)
   function renderMarkers(points) {
     markersLayer.clearLayers();
+    gridLayer.clearLayers(); //  clear old grid
+
     points.forEach(pt => {
       if (!pt.latlng) return;
+
+      // Circle marker
       const circle = L.circleMarker(pt.latlng, {
         radius: radiusForRain(pt.rain),
         fillColor: colorForRain(pt.rain),
@@ -135,6 +153,24 @@
         <b>Lon:</b> ${pt.latlng[1].toFixed(4)}
       `);
       markersLayer.addLayer(circle);
+
+      // Grid cell centered at point
+      if (gridToggle.checked) {
+        const cellSize = 0.25;
+        const lat = pt.latlng[0];
+        const lon = pt.latlng[1];
+        const bounds = [
+          [lat - cellSize / 2, lon - cellSize / 2],
+          [lat + cellSize / 2, lon + cellSize / 2]
+        ];
+        const rect = L.rectangle(bounds, {
+          color: '#555',
+          weight: 0.7,
+          fillOpacity: 0,
+          dashArray: "4"
+        });
+        gridLayer.addLayer(rect);
+      }
     });
 
     if (markersLayer.getLayers().length) {
@@ -198,38 +234,42 @@
     dateFilter.onchange = () => {
       renderMarkers(filteredPoints());
     };
+    // toggle grid re-render
+    gridToggle.onchange = () => {
+      renderMarkers(filteredPoints());
+    };
   }
 
-// Legend
-const legend = L.control({ position: 'bottomleft' });
-legend.onAdd = function () {
-  const div = L.DomUtil.create('div', 'legend');
-  div.id = 'legend';
+  // Legend
+  const legend = L.control({ position: 'bottomleft' });
+  legend.onAdd = function () {
+    const div = L.DomUtil.create('div', 'legend');
+    div.id = 'legend';
 
-  // 👇 Add title here
-  const title = document.createElement('div');
-  title.innerHTML = "<strong>Legend</strong>";
-  title.style.textAlign = "center";
-  title.style.marginBottom = "6px";
-  div.appendChild(title);
+    // Add title here
+    const title = document.createElement('div');
+    title.innerHTML = "<strong>Legend</strong>";
+    title.style.textAlign = "center";
+    title.style.marginBottom = "6px";
+    div.appendChild(title);
 
-  const labels = [
-    '0 mm', '<10 mm', '10–30 mm', '30–50 mm', '50–80 mm',
-    '80–100 mm', '100–150 mm', '>150 mm'
-  ];
-  const colors = [
-    '#f7fbff', '#deebf7', '#c6dbef', '#9ecae1',
-    '#6baed6', '#4292c6', '#2171b5', '#08306b'
-  ];
-  labels.forEach((l, i) => {
-    const item = document.createElement('div');
-    item.className = 'legend-item';
-    item.innerHTML = `<span class="legend-color" style="background:${colors[i]}"></span>${l}`;
-    div.appendChild(item);
-  });
-  return div;
-};
-legend.addTo(map);
+    const labels = [
+      '0 mm', '<10 mm', '10–30 mm', '30–50 mm', '50–80 mm',
+      '80–100 mm', '100–150 mm', '>150 mm'
+    ];
+    const colors = [
+      '#f7fbff', '#deebf7', '#c6dbef', '#9ecae1',
+      '#6baed6', '#4292c6', '#2171b5', '#08306b'
+    ];
+    labels.forEach((l, i) => {
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+      item.innerHTML = `<span class="legend-color" style="background:${colors[i]}"></span>${l}`;
+      div.appendChild(item);
+    });
+    return div;
+  };
+  legend.addTo(map);
 
   // === INITIAL LOAD ===
   await loadBaseData();
