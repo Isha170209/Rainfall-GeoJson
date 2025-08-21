@@ -129,6 +129,17 @@ footer {
   border: 1px solid #ccc;
 }
 
+/* ===== Coordinate Box ===== */
+#coordBox {
+  background: #fff;
+  padding: 10px 14px;
+  border-radius: 6px;
+  box-shadow: 0 0 6px rgba(0,0,0,0.2);
+  font-size: 13px;
+  margin-top: 8px; /* space below legend */
+  min-width: 200px;
+}
+
 /* ===== NEW: Grid Toggle Control ===== */
 .leaflet-control.grid-toggle-control {
   background: #fff;
