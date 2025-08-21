@@ -304,6 +304,7 @@
   populateSelect(tehsilFilter, [...baseLookups.tehsils].sort(), 'All Tehsils');
   setupCascading(baseLookups);
   renderMarkers(allPoints);
+
   // === Coordinate Display Box ===
   const coordControl = L.control({ position: 'bottomleft' });
   coordControl.onAdd = function () {
