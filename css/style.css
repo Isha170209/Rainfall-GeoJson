@@ -102,6 +102,18 @@ footer {
   min-width: 200px; /* broader */
 }
 
+/* Legend Title */
+#legend strong {
+  display: block;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #222;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 4px;
+}
+
 .legend-item {
   display: flex;
   align-items: center;
