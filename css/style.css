@@ -115,7 +115,7 @@ footer {
   border-radius: 6px;
   box-shadow: 0 0 6px rgba(0,0,0,0.2);
   font-size: 13px;
-  min-width: 180px; /* ensures single-line fit */
+  min-width: 200px; /* ensures single-line fit */
 }
 
 .legend-item {
