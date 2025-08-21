@@ -114,7 +114,7 @@
     if ([...items].includes(current)) selectEl.value = current;
   }
 
-  // Render points
+  // Render points (autozoom enabled)
   function renderMarkers(points) {
     markersLayer.clearLayers();
     points.forEach(pt => {
@@ -136,8 +136,12 @@
       `);
       markersLayer.addLayer(circle);
     });
+
     if (markersLayer.getLayers().length) {
-      map.fitBounds(markersLayer.getBounds().pad(0.2));
+      const bounds = markersLayer.getBounds().pad(0.2);
+      if (bounds.isValid()) {
+        map.flyToBounds(bounds, { padding: [50, 50], duration: 1.5 });
+      }
     }
   }
 
@@ -166,7 +170,7 @@
         populateSelect(districtFilter, [...lookups.districts].sort(), 'All Districts');
       }
       districtFilter.onchange();
-      renderMarkers(filteredPoints());  // re-render clipped points
+      renderMarkers(filteredPoints());
     };
 
     districtFilter.onchange = () => {
@@ -185,7 +189,7 @@
       } else {
         populateSelect(tehsilFilter, [...lookups.tehsils].sort(), 'All Tehsils');
       }
-      renderMarkers(filteredPoints());  // re-render clipped points
+      renderMarkers(filteredPoints());
     };
 
     tehsilFilter.onchange = () => {
