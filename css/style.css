@@ -99,27 +99,29 @@ footer {
 }
 
 /* ===== Legend ===== */
+/* ===== Legend ===== */
 #legend {
   position: absolute;
   bottom: 20px;
   left: 20px;
   background: #fff;
-  padding: 8px 12px;
+  padding: 10px 16px; /* increased padding for width */
   border-radius: 6px;
   box-shadow: 0 0 6px rgba(0,0,0,0.2);
   font-size: 13px;
+  min-width: 150px; /* ensures single-line fit */
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .legend-color {
-  width: 16px;
+  width: 20px;
   height: 16px;
-  margin-right: 6px;
+  margin-right: 8px;
   border: 1px solid #ccc;
 }
 
