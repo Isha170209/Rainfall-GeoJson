@@ -32,7 +32,6 @@
     if(mm<100) return '#08519c';
     return '#08306b';
   }
-
   function radiusForRain(mm){ return (mm===null||isNaN(mm))?4:Math.min(18,4+Math.sqrt(mm)); }
 
   async function loadData(){
@@ -74,7 +73,18 @@
     populateSelect(districtFilter,['',...Array.from(districts).sort()]);
     populateSelect(tehsilFilter,['',...Array.from(tehsils).sort()]);
 
-    points.forEach(pt=>addMarker(pt));
+    points.forEach(pt=>{
+      if(!pt.latlng) return;
+      const circle=L.circleMarker(pt.latlng,{
+        radius:radiusForRain(pt.rain),
+        fillColor:colorForRain(pt.rain),
+        color:'#222',
+        weight:0.6,
+        fillOpacity:0.8
+      }).bindPopup(`<b>${pt.state} / ${pt.district} / ${pt.tehsil}</b><br>Rain: ${pt.rain} mm`);
+      circle.feature=pt;
+      markersLayer.addLayer(circle);
+    });
 
     if(markersLayer.getLayers().length) map.fitBounds(markersLayer.getBounds().pad(0.2));
     showTopChart(points);
@@ -91,27 +101,6 @@
     });
   }
 
-  function addMarker(pt){
-    if(!pt.latlng) return;
-    const circle=L.circleMarker(pt.latlng,{
-      radius:radiusForRain(pt.rain),
-      fillColor:colorForRain(pt.rain),
-      color:'#222',
-      weight:0.6,
-      fillOpacity:0.8
-    }).bindPopup(`
-      <b>State:</b> ${pt.state}<br>
-      <b>District:</b> ${pt.district}<br>
-      <b>Tehsil:</b> ${pt.tehsil}<br>
-      <b>Date:</b> ${pt.props.Date || 'N/A'}<br>
-      <b>Rainfall:</b> ${pt.rain} mm<br>
-      <b>Lat:</b> ${pt.latlng[0]}<br>
-      <b>Lon:</b> ${pt.latlng[1]}
-    `);
-    circle.feature=pt;
-    markersLayer.addLayer(circle);
-  }
-
   function applyFilters(points){
     const s=stateFilter.value,d=districtFilter.value,t=tehsilFilter.value,date=dateFilter.value;
     markersLayer.clearLayers();
@@ -123,14 +112,24 @@
       return true;
     });
 
-    filtered.forEach(pt=>addMarker(pt));
+    filtered.forEach(pt=>{
+      if(!pt.latlng) return;
+      const circle=L.circleMarker(pt.latlng,{
+        radius:radiusForRain(pt.rain),
+        fillColor:colorForRain(pt.rain),
+        color:'#222',
+        weight:0.6,
+        fillOpacity:0.8
+      }).bindPopup(`<b>${pt.state} / ${pt.district} / ${pt.tehsil}</b><br>Rain: ${pt.rain} mm`);
+      markersLayer.addLayer(circle);
+    });
 
     if(markersLayer.getLayers().length) map.fitBounds(markersLayer.getBounds().pad(0.2));
     showTopChart(filtered);
   }
 
   function showTopChart(points){
-    const sorted=points.filter(p=>!isNaN(p.rain)).sort((a,b)=>b.rain-a.rain).slice(0,20);
+    const sorted=points.filter(p=>!isNaN(p.rain)).sort((a,b)=>b.rain-b.rain).slice(0,20);
     const labels=sorted.map(p=>(p.props.District||'')+' / '+(p.props.Tehsil||''));
     const values=sorted.map(p=>p.rain);
 
@@ -150,41 +149,21 @@
     });
   }
 
-   // ===== Legend =====
-  const legend = L.control({ position: 'bottomleft' });
-  legend.onAdd = function () {
-    const div = L.DomUtil.create('div', 'legend');
-    div.id = 'legend';
-
-    // 8 categories
-    const labels = [
-      '0 mm',
-      '<10 mm',
-      '10-30 mm',
-      '30-50 mm',
-      '50-80 mm',
-      '80-100 mm',
-      '100-150 mm',
-      '>150 mm'
-    ];
-    const colors = [
-      '#f7fbff', // 0
-      '#c6dbef', // <10
-      '#9ecae1', // 10–30
-      '#6baed6', // 30–50
-      '#4292c6', // 50–80
-      '#2171b5', // 80–100
-      '#08519c', // 100–150
-      '#08306b'  // >150
-    ];
-
-    labels.forEach((l, i) => {
-      const item = document.createElement('div');
-      item.className = 'legend-item';
-      item.innerHTML = `<span class="legend-color" style="background:${colors[i]}"></span>${l}`;
+  // ===== Legend =====
+  const legend=L.control({position:'bottomleft'});
+  legend.onAdd=function(){
+    const div=L.DomUtil.create('div','legend');
+    div.id='legend';
+    const labels=['0','<10','10-30','30-70','70-100','>100'];
+    const colors=['#f7fbff','#c6dbef','#6baed6','#2171b5','#08519c','#08306b'];
+    labels.forEach((l,i)=>{
+      const item=document.createElement('div');
+      item.className='legend-item';
+      item.innerHTML=`<span class="legend-color" style="background:${colors[i]}"></span>${l} mm`;
       div.appendChild(item);
     });
     return div;
   };
   legend.addTo(map);
 
+})();
