@@ -12,23 +12,23 @@
     <h1>IMD Gridded Rainfall Data Distribution</h1>
     <div id="controls">
       <div class="filterTab">
-        <label for="stateFilter">State:</label>
+        <div class="tabTitle">State</div>
         <select id="stateFilter"><option value="">All States</option></select>
       </div>
 
       <div class="filterTab">
-        <label for="districtFilter">District:</label>
+        <div class="tabTitle">District</div>
         <select id="districtFilter"><option value="">All Districts</option></select>
       </div>
 
       <div class="filterTab">
-        <label for="tehsilFilter">Tehsil:</label>
+        <div class="tabTitle">Tehsil</div>
         <select id="tehsilFilter"><option value="">All Tehsils</option></select>
       </div>
 
       <div class="filterTab">
-        <label for="dateFilter">Date:</label>
-        <input type="date" id="dateFilter">
+        <div class="tabTitle">Date</div>
+        <input type="date" id="dateFilter" />
       </div>
 
       <button id="submitBtn">Submit</button>
@@ -45,7 +45,6 @@
   </footer>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
