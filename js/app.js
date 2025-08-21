@@ -150,21 +150,41 @@
     });
   }
 
-  // ===== Legend =====
-  const legend=L.control({position:'bottomleft'});
-  legend.onAdd=function(){
-    const div=L.DomUtil.create('div','legend');
-    div.id='legend';
-    const labels=['0','<10','10-30','30-70','70-100','>100'];
-    const colors=['#f7fbff','#c6dbef','#6baed6','#2171b5','#08519c','#08306b'];
-    labels.forEach((l,i)=>{
-      const item=document.createElement('div');
-      item.className='legend-item';
-      item.innerHTML=`<span class="legend-color" style="background:${colors[i]}"></span>${l} mm`;
+   // ===== Legend =====
+  const legend = L.control({ position: 'bottomleft' });
+  legend.onAdd = function () {
+    const div = L.DomUtil.create('div', 'legend');
+    div.id = 'legend';
+
+    // 8 categories
+    const labels = [
+      '0 mm',
+      '<10 mm',
+      '10-30 mm',
+      '30-50 mm',
+      '50-80 mm',
+      '80-100 mm',
+      '100-150 mm',
+      '>150 mm'
+    ];
+    const colors = [
+      '#f7fbff', // 0
+      '#c6dbef', // <10
+      '#9ecae1', // 10–30
+      '#6baed6', // 30–50
+      '#4292c6', // 50–80
+      '#2171b5', // 80–100
+      '#08519c', // 100–150
+      '#08306b'  // >150
+    ];
+
+    labels.forEach((l, i) => {
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+      item.innerHTML = `<span class="legend-color" style="background:${colors[i]}"></span>${l}`;
       div.appendChild(item);
     });
     return div;
   };
   legend.addTo(map);
 
-})();
