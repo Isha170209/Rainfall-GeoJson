@@ -272,7 +272,7 @@
     div.style.fontSize = "13px";
 
     const title = document.createElement("div");
-    title.innerHTML = "<b>0.25° x 0.25°<br/>Resolution Grid</b>";
+    title.innerHTML = "Toggle Layer
     title.style.textAlign = "center";
     title.style.marginBottom = "6px";
     div.appendChild(title);
@@ -283,7 +283,7 @@
 
     const label = document.createElement("label");
     label.setAttribute("for", "gridToggle");
-    label.textContent = " Show Grid";
+    label.textContent = " <b>0.25° x 0.25°<br/>Resolution Grid</b>";
     label.style.marginLeft = "4px";
 
     const line = document.createElement("div");
