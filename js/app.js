@@ -22,22 +22,21 @@
   const resetBtn      = document.getElementById('resetBtn');
 
   // Layers / data
-  let baseData = null;          // the initially loaded file (latest or from manifest)
-  let workingData = null;       // data used for the current submit (may be a date file)
-  let allPoints = [];           // flattened points for workingData
+  let baseData = null;         
+  let allPoints = [];          
   let markersLayer = L.layerGroup().addTo(map);
 
-  // Colors: 8 categories (0, <10, 10–30, 30–50, 50–80, 80–100, 100–150, >150)
+  // Colors: 8 categories
   function colorForRain(mm) {
     if (mm === null || isNaN(mm)) return '#cccccc';
-    if (mm === 0) return '#f7fbff';     // 0
-    if (mm < 10)  return '#deebf7';     // <10
-    if (mm < 30)  return '#c6dbef';     // 10–30
-    if (mm < 50)  return '#9ecae1';     // 30–50
-    if (mm < 80)  return '#6baed6';     // 50–80
-    if (mm < 100) return '#4292c6';     // 80–100
-    if (mm < 150) return '#2171b5';     // 100–150
-    return '#08306b';                   // >150
+    if (mm === 0) return '#f7fbff';
+    if (mm < 10)  return '#deebf7';
+    if (mm < 30)  return '#c6dbef';
+    if (mm < 50)  return '#9ecae1';
+    if (mm < 80)  return '#6baed6';
+    if (mm < 100) return '#4292c6';
+    if (mm < 150) return '#2171b5';
+    return '#08306b';
   }
 
   function radiusForRain(mm) {
@@ -45,46 +44,43 @@
     return Math.min(18, 4 + Math.sqrt(mm));
   }
 
-  // Load base data (latest or manifest)
+  // Load base data
   async function loadBaseData() {
     try {
       const res = await fetch(manifestUrl + cacheBust);
       if (res.ok) {
         const m = await res.json();
         const url = dataBase + (m.latest || 'latest.geojson');
-        const g = await fetch(url + (url.includes('?') ? '&' : '?') + 'cache=' + Date.now());
-        if (!g.ok) throw new Error('Failed to load manifest latest.');
-        baseData = await g.json();
-        return;
+        const g = await fetch(url + '?cache=' + Date.now());
+        if (g.ok) {
+          baseData = await g.json();
+          return;
+        }
       }
-    } catch (e) { /* ignore */ }
-
-    // fallback
-    const fb = await fetch(latestFallback + (latestFallback.includes('?') ? '&' : '?') + 'cache=' + Date.now());
+    } catch (e) {}
+    const fb = await fetch(latestFallback + '?cache=' + Date.now());
     if (!fb.ok) throw new Error('Failed to load fallback geojson');
     baseData = await fb.json();
   }
 
-  // Build point list + lookup structures from a GeoJSON
+  // Ingest GeoJSON → lookups + points
   function ingestData(gjson) {
     const points = [];
     const states = new Set();
     const districts = new Set();
     const tehsils = new Set();
-
-    // cascading lookup
-    const mapStateToDistricts = new Map();              // state => Set(district)
-    const mapStateDistToTehsils = new Map();            // `${state}||${district}` => Set(tehsil)
+    const mapStateToDistricts = new Map();
+    const mapStateDistToTehsils = new Map();
 
     (gjson.features || []).forEach(f => {
-      const coords = f.geometry && f.geometry.coordinates;
+      const coords = f.geometry?.coordinates;
       const p = coords ? [coords[1], coords[0]] : null;
       const props = f.properties || {};
       const rain = parseFloat(props.Rainfall);
-      const state   = (props.State   || '').trim();
-      const district= (props.District|| '').trim();
-      const tehsil  = (props.Tehsil  || '').trim();
-      const date    = (props.Date    || '').trim();
+      const state   = (props.State || '').trim();
+      const district= (props.District || '').trim();
+      const tehsil  = (props.Tehsil || '').trim();
+      const date    = (props.Date || '').trim();
 
       states.add(state);
       districts.add(district);
@@ -103,7 +99,7 @@
     return { points, states, districts, tehsils, mapStateToDistricts, mapStateDistToTehsils };
   }
 
-  // Populate a select
+  // Populate dropdown
   function populateSelect(selectEl, items, placeholderText) {
     const current = selectEl.value;
     selectEl.innerHTML = '';
@@ -117,14 +113,12 @@
       opt.textContent = val;
       selectEl.appendChild(opt);
     });
-    // keep selection if still present
     if ([...items].includes(current)) selectEl.value = current;
   }
 
-  // Render markers for a given set of points
+  // Render points
   function renderMarkers(points) {
     markersLayer.clearLayers();
-
     points.forEach(pt => {
       if (!pt.latlng) return;
       const circle = L.circleMarker(pt.latlng, {
@@ -137,26 +131,24 @@
         <b>State:</b> ${pt.state || 'N/A'}<br/>
         <b>District:</b> ${pt.district || 'N/A'}<br/>
         <b>Tehsil:</b> ${pt.tehsil || 'N/A'}<br/>
-        <b>Date:</b> ${pt.date || pt.props?.Date || 'N/A'}<br/>
+        <b>Date:</b> ${pt.date || 'N/A'}<br/>
         <b>Rainfall:</b> ${isNaN(pt.rain) ? 'N/A' : pt.rain + ' mm'}<br/>
         <b>Lat:</b> ${pt.latlng[0].toFixed(4)}<br/>
         <b>Lon:</b> ${pt.latlng[1].toFixed(4)}
       `);
       markersLayer.addLayer(circle);
     });
-
     if (markersLayer.getLayers().length) {
       map.fitBounds(markersLayer.getBounds().pad(0.2));
     }
   }
 
-  // Apply current UI filters to allPoints
+  // Filtering
   function filteredPoints() {
-    const s = (stateFilter.value || '').trim();
-    const d = (districtFilter.value || '').trim();
-    const t = (tehsilFilter.value || '').trim();
-    const date = (dateFilter.value || '').trim(); // YYYY-MM-DD
-
+    const s = stateFilter.value.trim();
+    const d = districtFilter.value.trim();
+    const t = tehsilFilter.value.trim();
+    const date = dateFilter.value.trim();
     return allPoints.filter(p => {
       if (s && p.state !== s) return false;
       if (d && p.district !== d) return false;
@@ -166,50 +158,17 @@
     });
   }
 
-  // Try to load a dated file; fallback to filtering the current baseData
-  async function getWorkingDataForSubmit() {
-    const selectedDate = (dateFilter.value || '').trim();
-    if (!selectedDate) return baseData;
-
-    const datedUrl = `${dataBase}${selectedDate}.geojson`;
-    try {
-      const res = await fetch(datedUrl + '?cache=' + Date.now());
-      if (res.ok) {
-        return await res.json();
-      }
-    } catch (e) { /* ignore */ }
-    // fallback to baseData if dated file not found
-    return baseData;
-  }
-
-  // Cascade: when state changes, update districts & tehsils (no map update yet)
+  // Cascade
   function setupCascading(lookups) {
     stateFilter.onchange = () => {
       const s = stateFilter.value;
-      // update districts
       if (s && lookups.mapStateToDistricts.has(s)) {
         populateSelect(districtFilter, [...lookups.mapStateToDistricts.get(s)].sort(), 'All Districts');
       } else {
         populateSelect(districtFilter, [...lookups.districts].sort(), 'All Districts');
       }
-      // update tehsils based on (s, d)
-      const d = districtFilter.value;
-      const key = `${s}||${d}`;
-      if (s && d && lookups.mapStateDistToTehsils.has(key)) {
-        populateSelect(tehsilFilter, [...lookups.mapStateDistToTehsils.get(key)].sort(), 'All Tehsils');
-      } else if (s && !d) {
-        // gather all tehsils under state
-        const tehs = new Set();
-        (lookups.mapStateToDistricts.get(s) || []).forEach(dd => {
-          const k = `${s}||${dd}`;
-          (lookups.mapStateDistToTehsils.get(k) || []).forEach(t => tehs.add(t));
-        });
-        populateSelect(tehsilFilter, [...tehs].sort(), 'All Tehsils');
-      } else {
-        populateSelect(tehsilFilter, [...lookups.tehsils].sort(), 'All Tehsils');
-      }
+      districtFilter.onchange();
     };
-
     districtFilter.onchange = () => {
       const s = stateFilter.value;
       const d = districtFilter.value;
@@ -217,7 +176,6 @@
       if (s && d && lookups.mapStateDistToTehsils.has(key)) {
         populateSelect(tehsilFilter, [...lookups.mapStateDistToTehsils.get(key)].sort(), 'All Tehsils');
       } else if (s && !d) {
-        // state chosen, district cleared: gather all tehsils in state
         const tehs = new Set();
         (lookups.mapStateToDistricts.get(s) || []).forEach(dd => {
           const k = `${s}||${dd}`;
@@ -230,7 +188,7 @@
     };
   }
 
-  // ===== Legend (8 bins) =====
+  // Legend
   const legend = L.control({ position: 'bottomleft' });
   legend.onAdd = function () {
     const div = L.DomUtil.create('div', 'legend');
@@ -253,67 +211,58 @@
   };
   legend.addTo(map);
 
-  // ===== Initial load =====
+  // === INITIAL LOAD ===
   await loadBaseData();
-
-  // Ingest base data and populate initial selects (full universe)
   const baseLookups = ingestData(baseData);
   allPoints = baseLookups.points;
-
-  populateSelect(stateFilter,   [...baseLookups.states].sort(),   'All States');
-  populateSelect(districtFilter,[...baseLookups.districts].sort(),'All Districts');
-  populateSelect(tehsilFilter,  [...baseLookups.tehsils].sort(),  'All Tehsils');
-
+  populateSelect(stateFilter, [...baseLookups.states].sort(), 'All States');
+  populateSelect(districtFilter, [...baseLookups.districts].sort(), 'All Districts');
+  populateSelect(tehsilFilter, [...baseLookups.tehsils].sort(), 'All Tehsils');
   setupCascading(baseLookups);
-
-  // Draw all points by default
   renderMarkers(allPoints);
 
-  // ===== Submit: load date file if available, then filter & render =====
+  // === SUBMIT ===
   submitBtn.onclick = async () => {
-    // Load workingData (date file or base)
-    workingData = await getWorkingDataForSubmit();
+    const selectedDate = dateFilter.value.trim();
+    let data = baseData;
 
-    // Build points & lookups for workingData (to ensure dropdowns reflect actual available values)
-    const lk = ingestData(workingData);
+    if (selectedDate) {
+      try {
+        const res = await fetch(`${dataBase}${selectedDate}.geojson?cache=${Date.now()}`);
+        if (res.ok) data = await res.json();
+      } catch (e) {}
+    }
+
+    const lk = ingestData(data);
     allPoints = lk.points;
+    populateSelect(stateFilter, [...lk.states].sort(), 'All States');
+    populateSelect(districtFilter, [...lk.districts].sort(), 'All Districts');
+    populateSelect(tehsilFilter, [...lk.tehsils].sort(), 'All Tehsils');
+    setupCascading(lk);
 
-    // IMPORTANT: preserve current selections, but repopulate to actual available options
-    populateSelect(stateFilter,   [...lk.states].sort(),   'All States');
-    populateSelect(districtFilter,[...lk.districts].sort(),'All Districts');
-    populateSelect(tehsilFilter,  [...lk.tehsils].sort(),  'All Tehsils');
-
-    setupCascading(lk); // ensure cascade reflects working set
-
-    // Apply current selections to the points (state/district/tehsil/date)
     const pts = filteredPoints();
     renderMarkers(pts);
-
     if (!pts.length) {
-      // If nothing matched, zoom to India extents as fallback
       map.setView([22.5, 79], 5);
       alert('No points match the current filters.');
     }
   };
 
-  // ===== Reset: clear filters, show everything from baseData =====
-  resetBtn.onclick = async () => {
-    // clear UI
+  // === RESET ===
+  resetBtn.onclick = () => {
     stateFilter.value = '';
     districtFilter.value = '';
     tehsilFilter.value = '';
     dateFilter.value = '';
 
-    // revert to base data universe
     const lk = ingestData(baseData);
     allPoints = lk.points;
-
-    populateSelect(stateFilter,   [...lk.states].sort(),   'All States');
-    populateSelect(districtFilter,[...lk.districts].sort(),'All Districts');
-    populateSelect(tehsilFilter,  [...lk.tehsils].sort(),  'All Tehsils');
-
+    populateSelect(stateFilter, [...lk.states].sort(), 'All States');
+    populateSelect(districtFilter, [...lk.districts].sort(), 'All Districts');
+    populateSelect(tehsilFilter, [...lk.tehsils].sort(), 'All Tehsils');
     setupCascading(lk);
 
     renderMarkers(allPoints);
+    map.setView([22.5, 79], 5);
   };
 })();
