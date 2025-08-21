@@ -107,8 +107,8 @@ footer {
   padding: 8px 12px;
   border-radius: 6px;
   box-shadow: 0 0 6px rgba(0,0,0,0.2);
-  font-size: 13px;
-  min-width: 160px;
+  font-size: 16px;
+  min-width: 140px;
 }
 
 .legend-item {
