@@ -166,7 +166,9 @@
         populateSelect(districtFilter, [...lookups.districts].sort(), 'All Districts');
       }
       districtFilter.onchange();
+      renderMarkers(filteredPoints());  // re-render clipped points
     };
+
     districtFilter.onchange = () => {
       const s = stateFilter.value;
       const d = districtFilter.value;
@@ -183,6 +185,14 @@
       } else {
         populateSelect(tehsilFilter, [...lookups.tehsils].sort(), 'All Tehsils');
       }
+      renderMarkers(filteredPoints());  // re-render clipped points
+    };
+
+    tehsilFilter.onchange = () => {
+      renderMarkers(filteredPoints());
+    };
+    dateFilter.onchange = () => {
+      renderMarkers(filteredPoints());
     };
   }
 
@@ -218,5 +228,4 @@
   populateSelect(tehsilFilter, [...baseLookups.tehsils].sort(), 'All Tehsils');
   setupCascading(baseLookups);
   renderMarkers(allPoints);
-
-  
+})();
