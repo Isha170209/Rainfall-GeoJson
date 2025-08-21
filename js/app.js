@@ -154,8 +154,8 @@
   legend.onAdd=function(){
     const div=L.DomUtil.create('div','legend');
     div.id='legend';
-    const labels=['0','<10','10-30','30-50','50-80','80-100','100-150','>150'];
-    const colors=['#f7fbff','#c6dbef','#9ecae1","#6baed6","#4292c6","#2171b5","#08519c","#08519c","#08306b];
+    const labels=['0','<10','10-30','30-70','70-100','>100'];
+    const colors=['#f7fbff','#c6dbef','#6baed6','#2171b5','#08519c','#08306b'];
     labels.forEach((l,i)=>{
       const item=document.createElement('div');
       item.className='legend-item';
