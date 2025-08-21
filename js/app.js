@@ -304,28 +304,4 @@
   populateSelect(tehsilFilter, [...baseLookups.tehsils].sort(), 'All Tehsils');
   setupCascading(baseLookups);
   renderMarkers(allPoints);
-
-  // === Coordinate Display Box ===
-  const coordControl = L.control({ position: 'bottomleft' });
-  coordControl.onAdd = function () {
-    const div = L.DomUtil.create('div', 'coord-box');
-    div.id = 'coordBox';
-    div.innerHTML = `
-      <div style="font-weight:bold; margin-bottom:4px; text-align:center;">
-        Click on map to get coordinates
-      </div>
-      <div id="coordContent" style="text-align:center; font-size:13px; color:#333;">
-        —
-      </div>
-    `;
-    return div;
-  };
-  coordControl.addTo(map);
-
-  // Map click → update coordinates
-  map.on('click', function (e) {
-    const lat = e.latlng.lat.toFixed(4);
-    const lon = e.latlng.lng.toFixed(4);
-    document.getElementById('coordContent').textContent = `Lat: ${lat}, Lon: ${lon}`;
-  });
 })();
