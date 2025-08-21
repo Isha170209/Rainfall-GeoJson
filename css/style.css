@@ -35,6 +35,13 @@ header {
   font-weight: 600;
 }
 
+.tabTitle {
+  font-size: 12px;
+  font-weight: bold;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
 #controls select,
 #controls input[type="date"],
 #controls button {
@@ -99,17 +106,16 @@ footer {
 }
 
 /* ===== Legend ===== */
-/* ===== Legend ===== */
 #legend {
   position: absolute;
   bottom: 20px;
   left: 20px;
   background: #fff;
-  padding: 10px 16px; /* increased padding for width */
+  padding: 10px 20px; /* increased width to fit text */
   border-radius: 6px;
   box-shadow: 0 0 6px rgba(0,0,0,0.2);
   font-size: 13px;
-  min-width: 150px; /* ensures single-line fit */
+  min-width: 180px; /* ensures single-line fit */
 }
 
 .legend-item {
@@ -127,9 +133,7 @@ footer {
 
 /* ===== Responsive ===== */
 @media (max-width: 1024px) {
-  #side {
-    width: 250px;
-  }
+  #side { width: 250px; }
 }
 
 @media (max-width: 768px) {
