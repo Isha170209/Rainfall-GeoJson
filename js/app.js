@@ -15,7 +15,7 @@
 
   // Layers
   let gridLayer = L.layerGroup().addTo(map);   // grid is default
-  let markersLayer = L.layerGroup();           // markers shown only if toggled
+  let markersLayer = L.layerGroup();           // circles added only when toggled
 
   let markerToggle = null; // toggle checkbox reference
 
@@ -45,6 +45,11 @@
   function radiusForRain(mm) {
     if (mm === null || isNaN(mm)) return 4;
     return Math.min(18, 4 + Math.sqrt(mm));
+  }
+
+  // Snap any lat/lon to the center of a cell of given size (e.g., 0.25°)
+  function snapToGrid(val, size) {
+    return Math.floor(val / size) * size + size / 2;
   }
 
   // Load base data
@@ -124,27 +129,46 @@
     markersLayer.clearLayers();
     gridLayer.clearLayers();
 
-    // Always render grid cells
     const cellSize = 0.25;
+    const showCircles = !!(markerToggle && markerToggle.checked);
+
     points.forEach(pt => {
       if (!pt.latlng) return;
-      const lat = pt.latlng[0];
-      const lon = pt.latlng[1];
+
+      // Snap to grid center for both the grid & the circle
+      const rawLat = pt.latlng[0];
+      const rawLon = pt.latlng[1];
+      const cLat   = snapToGrid(rawLat, cellSize);
+      const cLon   = snapToGrid(rawLon, cellSize);
+
+      // Grid cell bounds centered on the snapped center
       const bounds = [
-        [lat - cellSize / 2, lon - cellSize / 2],
-        [lat + cellSize / 2, lon + cellSize / 2]
+        [cLat - cellSize / 2, cLon - cellSize / 2],
+        [cLat + cellSize / 2, cLon + cellSize / 2]
       ];
+
       const rect = L.rectangle(bounds, {
         color: '#555',
         weight: 0.7,
-        fillOpacity: 0,
+        fillOpacity: 0.15,
         dashArray: '4'
       });
+
+      // Popup for grid cell
+      rect.bindPopup(`
+        <b>State:</b> ${pt.state || 'N/A'}<br/>
+        <b>District:</b> ${pt.district || 'N/A'}<br/>
+        <b>Tehsil:</b> ${pt.tehsil || 'N/A'}<br/>
+        <b>Date:</b> ${pt.date || 'N/A'}<br/>
+        <b>Rainfall:</b> ${isNaN(pt.rain) ? 'N/A' : pt.rain + ' mm'}<br/>
+        <b>Cell center:</b> ${cLat.toFixed(4)}, ${cLon.toFixed(4)}
+      `);
+
       gridLayer.addLayer(rect);
 
-      // Add markers only if toggle is checked
-      if (markerToggle && markerToggle.checked) {
-        const circle = L.circleMarker(pt.latlng, {
+      // Optional circle marker at the same grid center
+      if (showCircles) {
+        const circle = L.circleMarker([cLat, cLon], {
           radius: radiusForRain(pt.rain),
           fillColor: colorForRain(pt.rain),
           color: '#222',
@@ -156,15 +180,24 @@
           <b>Tehsil:</b> ${pt.tehsil || 'N/A'}<br/>
           <b>Date:</b> ${pt.date || 'N/A'}<br/>
           <b>Rainfall:</b> ${isNaN(pt.rain) ? 'N/A' : pt.rain + ' mm'}<br/>
-          <b>Lat:</b> ${pt.latlng[0].toFixed(4)}<br/>
-          <b>Lon:</b> ${pt.latlng[1].toFixed(4)}
+          <b>Point (grid center):</b> ${cLat.toFixed(4)}, ${cLon.toFixed(4)}
         `);
         markersLayer.addLayer(circle);
       }
     });
 
+    // Mount/unmount the marker layer depending on toggle
+    if (showCircles) {
+      if (!map.hasLayer(markersLayer)) markersLayer.addTo(map);
+    } else {
+      if (map.hasLayer(markersLayer)) map.removeLayer(markersLayer);
+    }
+
     // Autozoom: prefer markers if visible, else zoom to grid
-    const targetLayer = (markerToggle && markerToggle.checked) ? markersLayer : gridLayer;
+    const targetLayer = (showCircles && markersLayer.getLayers().length)
+      ? markersLayer
+      : gridLayer;
+
     if (targetLayer.getLayers().length) {
       const bounds = targetLayer.getBounds().pad(0.2);
       if (bounds.isValid()) {
@@ -234,7 +267,7 @@
     }
   }
 
-  // Legend
+  // Legend (Leaflet control – kept as-is)
   const legend = L.control({ position: 'bottomleft' });
   legend.onAdd = function () {
     const div = L.DomUtil.create('div', 'legend');
@@ -263,7 +296,7 @@
   };
   legend.addTo(map);
 
-  // Coordinate Display Box
+  // Coordinate Display Box (below legend)
   const coordControl = L.control({ position: 'bottomleft' });
   coordControl.onAdd = function () {
     const div = L.DomUtil.create('div', 'coord-box');
@@ -280,6 +313,7 @@
   };
   coordControl.addTo(map);
 
+  // Map click → update coordinates (decimal degrees)
   map.on('click', function (e) {
     const lat = e.latlng.lat.toFixed(4);
     const lon = e.latlng.lng.toFixed(4);
@@ -287,10 +321,16 @@
     if (el) el.textContent = `Lat: ${lat}, Lon: ${lon}`;
   });
 
-  // Marker toggle control (instead of grid toggle)
+  // Marker toggle control (top-right)
   const markerControl = L.control({ position: 'topright' });
   markerControl.onAdd = function () {
     const div = L.DomUtil.create('div', 'leaflet-bar grid-toggle-control');
+    div.style.background = '#fff';
+    div.style.padding = '8px';
+    div.style.borderRadius = '6px';
+    div.style.boxShadow = '0 0 4px rgba(0,0,0,0.3)';
+    div.style.fontSize = '13px';
+
     const title = document.createElement('div');
     title.className = 'grid-toggle-title';
     title.textContent = 'Rainfall Data Points';
@@ -300,8 +340,11 @@
     markerToggle = document.createElement('input');
     markerToggle.type = 'checkbox';
     markerToggle.id = 'markerToggle';
+    markerToggle.style.marginRight = '6px';
+
     const labelText = document.createElement('span');
     labelText.textContent = 'Show Circles';
+
     line.appendChild(markerToggle);
     line.appendChild(labelText);
     div.appendChild(line);
