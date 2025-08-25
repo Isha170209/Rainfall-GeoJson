@@ -14,11 +14,10 @@
   }).addTo(map);
 
   // Layers
-  let gridLayer = L.layerGroup().addTo(map);
-  let markersLayer = L.layerGroup().addTo(map);
+  let gridLayer = L.layerGroup().addTo(map);   // grid is default
+  let markersLayer = L.layerGroup();           // markers shown only if toggled
 
-  // Will be set by the control later
-  let gridToggle = null;
+  let markerToggle = null; // toggle checkbox reference
 
   // UI
   const stateFilter    = document.getElementById('stateFilter');
@@ -120,55 +119,54 @@
     if ([...items].includes(current)) selectEl.value = current;
   }
 
-  // Render points (autozoom enabled)
-  function renderMarkers(points) {
+  // Render layers (grid always, markers optional)
+  function renderData(points) {
     markersLayer.clearLayers();
     gridLayer.clearLayers();
 
-    const showGrid = !!(gridToggle && gridToggle.checked);
-
+    // Always render grid cells
+    const cellSize = 0.25;
     points.forEach(pt => {
       if (!pt.latlng) return;
+      const lat = pt.latlng[0];
+      const lon = pt.latlng[1];
+      const bounds = [
+        [lat - cellSize / 2, lon - cellSize / 2],
+        [lat + cellSize / 2, lon + cellSize / 2]
+      ];
+      const rect = L.rectangle(bounds, {
+        color: '#555',
+        weight: 0.7,
+        fillOpacity: 0,
+        dashArray: '4'
+      });
+      gridLayer.addLayer(rect);
 
-      // Circle marker
-      const circle = L.circleMarker(pt.latlng, {
-        radius: radiusForRain(pt.rain),
-        fillColor: colorForRain(pt.rain),
-        color: '#222',
-        weight: 0.6,
-        fillOpacity: 0.85
-      }).bindPopup(`
-        <b>State:</b> ${pt.state || 'N/A'}<br/>
-        <b>District:</b> ${pt.district || 'N/A'}<br/>
-        <b>Tehsil:</b> ${pt.tehsil || 'N/A'}<br/>
-        <b>Date:</b> ${pt.date || 'N/A'}<br/>
-        <b>Rainfall:</b> ${isNaN(pt.rain) ? 'N/A' : pt.rain + ' mm'}<br/>
-        <b>Lat:</b> ${pt.latlng[0].toFixed(4)}<br/>
-        <b>Lon:</b> ${pt.latlng[1].toFixed(4)}
-      `);
-      markersLayer.addLayer(circle);
-
-      // Grid cell centered at point (0.25° × 0.25°)
-      if (showGrid) {
-        const cellSize = 0.25;
-        const lat = pt.latlng[0];
-        const lon = pt.latlng[1];
-        const bounds = [
-          [lat - cellSize / 2, lon - cellSize / 2],
-          [lat + cellSize / 2, lon + cellSize / 2]
-        ];
-        const rect = L.rectangle(bounds, {
-          color: '#555',
-          weight: 0.7,
-          fillOpacity: 0,
-          dashArray: '4'
-        });
-        gridLayer.addLayer(rect);
+      // Add markers only if toggle is checked
+      if (markerToggle && markerToggle.checked) {
+        const circle = L.circleMarker(pt.latlng, {
+          radius: radiusForRain(pt.rain),
+          fillColor: colorForRain(pt.rain),
+          color: '#222',
+          weight: 0.6,
+          fillOpacity: 0.85
+        }).bindPopup(`
+          <b>State:</b> ${pt.state || 'N/A'}<br/>
+          <b>District:</b> ${pt.district || 'N/A'}<br/>
+          <b>Tehsil:</b> ${pt.tehsil || 'N/A'}<br/>
+          <b>Date:</b> ${pt.date || 'N/A'}<br/>
+          <b>Rainfall:</b> ${isNaN(pt.rain) ? 'N/A' : pt.rain + ' mm'}<br/>
+          <b>Lat:</b> ${pt.latlng[0].toFixed(4)}<br/>
+          <b>Lon:</b> ${pt.latlng[1].toFixed(4)}
+        `);
+        markersLayer.addLayer(circle);
       }
     });
 
-    if (markersLayer.getLayers().length) {
-      const bounds = markersLayer.getBounds().pad(0.2);
+    // Autozoom: prefer markers if visible, else zoom to grid
+    const targetLayer = (markerToggle && markerToggle.checked) ? markersLayer : gridLayer;
+    if (targetLayer.getLayers().length) {
+      const bounds = targetLayer.getBounds().pad(0.2);
       if (bounds.isValid()) {
         map.flyToBounds(bounds, { padding: [50, 50], duration: 1.5 });
       }
@@ -200,7 +198,7 @@
         populateSelect(districtFilter, [...lookups.districts].sort(), 'All Districts');
       }
       districtFilter.onchange();
-      renderMarkers(filteredPoints());
+      renderData(filteredPoints());
     };
 
     districtFilter.onchange = () => {
@@ -219,20 +217,19 @@
       } else {
         populateSelect(tehsilFilter, [...lookups.tehsils].sort(), 'All Tehsils');
       }
-      renderMarkers(filteredPoints());
+      renderData(filteredPoints());
     };
 
     tehsilFilter.onchange = () => {
-      renderMarkers(filteredPoints());
+      renderData(filteredPoints());
     };
     dateFilter.onchange = () => {
-      renderMarkers(filteredPoints());
+      renderData(filteredPoints());
     };
 
-    // Toggle grid re-render (safe if control not mounted yet)
-    if (gridToggle) {
-      gridToggle.onchange = () => {
-        renderMarkers(filteredPoints());
+    if (markerToggle) {
+      markerToggle.onchange = () => {
+        renderData(filteredPoints());
       };
     }
   }
@@ -242,8 +239,6 @@
   legend.onAdd = function () {
     const div = L.DomUtil.create('div', 'legend');
     div.id = 'legend';
-
-    // Title
     const title = document.createElement('div');
     title.innerHTML = '<strong>Legend</strong>';
     title.style.textAlign = 'center';
@@ -268,7 +263,7 @@
   };
   legend.addTo(map);
 
-  // Coordinate Display Box (below legend)
+  // Coordinate Display Box
   const coordControl = L.control({ position: 'bottomleft' });
   coordControl.onAdd = function () {
     const div = L.DomUtil.create('div', 'coord-box');
@@ -285,7 +280,6 @@
   };
   coordControl.addTo(map);
 
-  // Map click → update coordinates (decimal degrees)
   map.on('click', function (e) {
     const lat = e.latlng.lat.toFixed(4);
     const lon = e.latlng.lng.toFixed(4);
@@ -293,46 +287,34 @@
     if (el) el.textContent = `Lat: ${lat}, Lon: ${lon}`;
   });
 
-  // Grid toggle as Leaflet control (top-right)
-  const gridControl = L.control({ position: 'topright' });
-  gridControl.onAdd = function () {
+  // Marker toggle control (instead of grid toggle)
+  const markerControl = L.control({ position: 'topright' });
+  markerControl.onAdd = function () {
     const div = L.DomUtil.create('div', 'leaflet-bar grid-toggle-control');
-    div.style.background = '#fff';
-    div.style.padding = '8px';
-    div.style.borderRadius = '6px';
-    div.style.boxShadow = '0 0 4px rgba(0,0,0,0.3)';
-    div.style.fontSize = '13px';
-
     const title = document.createElement('div');
     title.className = 'grid-toggle-title';
-    title.textContent = '0.25° × 0.25° resolution grid';
+    title.textContent = 'Rainfall Data Points';
     div.appendChild(title);
 
     const line = document.createElement('label');
-
-    gridToggle = document.createElement('input');
-    gridToggle.type = 'checkbox';
-    gridToggle.id = 'gridToggle';
-    gridToggle.style.marginRight = '6px';
-
+    markerToggle = document.createElement('input');
+    markerToggle.type = 'checkbox';
+    markerToggle.id = 'markerToggle';
     const labelText = document.createElement('span');
-    labelText.textContent = 'Show Grid';
-
-    line.appendChild(gridToggle);
+    labelText.textContent = 'Show Circles';
+    line.appendChild(markerToggle);
     line.appendChild(labelText);
     div.appendChild(line);
 
-    // Prevent clicks on control from panning the map
     L.DomEvent.disableClickPropagation(div);
 
-    // Hook up change after element exists
-    gridToggle.onchange = () => {
-      renderMarkers(filteredPoints());
+    markerToggle.onchange = () => {
+      renderData(filteredPoints());
     };
 
     return div;
   };
-  gridControl.addTo(map);
+  markerControl.addTo(map);
 
   // === INITIAL LOAD ===
   await loadBaseData();
@@ -344,5 +326,5 @@
   populateSelect(tehsilFilter,  [...baseLookups.tehsils].sort(), 'All Tehsils');
 
   setupCascading(baseLookups);
-  renderMarkers(allPoints);
+  renderData(allPoints);
 })();
