@@ -13,19 +13,22 @@
     maxZoom: 20
   }).addTo(map);
 
-  // NEW: layer for grid rectangles
+  // Layers
   let gridLayer = L.layerGroup().addTo(map);
+  let markersLayer = L.layerGroup().addTo(map);
+
+  // Will be set by the control later
+  let gridToggle = null;
 
   // UI
-  const stateFilter   = document.getElementById('stateFilter');
-  const districtFilter= document.getElementById('districtFilter');
-  const tehsilFilter  = document.getElementById('tehsilFilter');
-  const dateFilter    = document.getElementById('dateFilter');
+  const stateFilter    = document.getElementById('stateFilter');
+  const districtFilter = document.getElementById('districtFilter');
+  const tehsilFilter   = document.getElementById('tehsilFilter');
+  const dateFilter     = document.getElementById('dateFilter');
 
-  // Layers / data
-  let baseData = null;         
-  let allPoints = [];          
-  let markersLayer = L.layerGroup().addTo(map);
+  // Data
+  let baseData = null;
+  let allPoints = [];
 
   // Colors: 8 categories
   function colorForRain(mm) {
@@ -78,10 +81,10 @@
       const p = coords ? [coords[1], coords[0]] : null;
       const props = f.properties || {};
       const rain = parseFloat(props.Rainfall);
-      const state   = (props.State || '').trim();
-      const district= (props.District || '').trim();
-      const tehsil  = (props.Tehsil || '').trim();
-      const date    = (props.Date || '').trim();
+      const state    = (props.State || '').trim();
+      const district = (props.District || '').trim();
+      const tehsil   = (props.Tehsil || '').trim();
+      const date     = (props.Date || '').trim();
 
       states.add(state);
       districts.add(district);
@@ -120,7 +123,9 @@
   // Render points (autozoom enabled)
   function renderMarkers(points) {
     markersLayer.clearLayers();
-    gridLayer.clearLayers(); //  clear old grid
+    gridLayer.clearLayers();
+
+    const showGrid = !!(gridToggle && gridToggle.checked);
 
     points.forEach(pt => {
       if (!pt.latlng) return;
@@ -143,8 +148,8 @@
       `);
       markersLayer.addLayer(circle);
 
-      // Grid cell centered at point
-      if (gridToggle.checked) {
+      // Grid cell centered at point (0.25° × 0.25°)
+      if (showGrid) {
         const cellSize = 0.25;
         const lat = pt.latlng[0];
         const lon = pt.latlng[1];
@@ -156,7 +161,7 @@
           color: '#555',
           weight: 0.7,
           fillOpacity: 0,
-          dashArray: "4"
+          dashArray: '4'
         });
         gridLayer.addLayer(rect);
       }
@@ -223,10 +228,13 @@
     dateFilter.onchange = () => {
       renderMarkers(filteredPoints());
     };
-    // toggle grid re-render
-    gridToggle.onchange = () => {
-      renderMarkers(filteredPoints());
-    };
+
+    // Toggle grid re-render (safe if control not mounted yet)
+    if (gridToggle) {
+      gridToggle.onchange = () => {
+        renderMarkers(filteredPoints());
+      };
+    }
   }
 
   // Legend
@@ -235,11 +243,11 @@
     const div = L.DomUtil.create('div', 'legend');
     div.id = 'legend';
 
-    // Add title here
+    // Title
     const title = document.createElement('div');
-    title.innerHTML = "<strong>Legend</strong>";
-    title.style.textAlign = "center";
-    title.style.marginBottom = "6px";
+    title.innerHTML = '<strong>Legend</strong>';
+    title.style.textAlign = 'center';
+    title.style.marginBottom = '6px';
     div.appendChild(title);
 
     const labels = [
@@ -260,36 +268,67 @@
   };
   legend.addTo(map);
 
-  // NEW: Grid toggle as Leaflet control
-  let gridToggle;
-  const gridControl = L.control({ position: "topright" });
-  gridControl.onAdd = function () {
-    const div = L.DomUtil.create("div", "leaflet-bar");
-    div.style.background = "#fff";
-    div.style.padding = "8px";
-    div.style.borderRadius = "6px";
-    div.style.boxShadow = "0 0 4px rgba(0,0,0,0.3)";
-    div.style.fontSize = "13px";
+  // Coordinate Display Box (below legend)
+  const coordControl = L.control({ position: 'bottomleft' });
+  coordControl.onAdd = function () {
+    const div = L.DomUtil.create('div', 'coord-box');
+    div.id = 'coordBox';
+    div.innerHTML = `
+      <div style="font-weight:bold; margin-bottom:4px; text-align:center;">
+        Click on map to get coordinates
+      </div>
+      <div id="coordContent" style="text-align:center; font-size:13px; color:#333;">
+        —
+      </div>
+    `;
+    return div;
+  };
+  coordControl.addTo(map);
 
-    const title = document.createElement("div");
-    title.innerHTML = "Toggle Layer
-    title.style.textAlign = "center";
-    title.style.marginBottom = "6px";
+  // Map click → update coordinates (decimal degrees)
+  map.on('click', function (e) {
+    const lat = e.latlng.lat.toFixed(4);
+    const lon = e.latlng.lng.toFixed(4);
+    const el = document.getElementById('coordContent');
+    if (el) el.textContent = `Lat: ${lat}, Lon: ${lon}`;
+  });
+
+  // Grid toggle as Leaflet control (top-right)
+  const gridControl = L.control({ position: 'topright' });
+  gridControl.onAdd = function () {
+    const div = L.DomUtil.create('div', 'leaflet-bar grid-toggle-control');
+    div.style.background = '#fff';
+    div.style.padding = '8px';
+    div.style.borderRadius = '6px';
+    div.style.boxShadow = '0 0 4px rgba(0,0,0,0.3)';
+    div.style.fontSize = '13px';
+
+    const title = document.createElement('div');
+    title.className = 'grid-toggle-title';
+    title.textContent = '0.25° × 0.25° resolution grid';
     div.appendChild(title);
 
-    gridToggle = document.createElement("input");
-    gridToggle.type = "checkbox";
-    gridToggle.id = "gridToggle";
+    const line = document.createElement('label');
 
-    const label = document.createElement("label");
-    label.setAttribute("for", "gridToggle");
-    label.textContent = " <b>0.25° x 0.25°<br/>Resolution Grid</b>";
-    label.style.marginLeft = "4px";
+    gridToggle = document.createElement('input');
+    gridToggle.type = 'checkbox';
+    gridToggle.id = 'gridToggle';
+    gridToggle.style.marginRight = '6px';
 
-    const line = document.createElement("div");
+    const labelText = document.createElement('span');
+    labelText.textContent = 'Show Grid';
+
     line.appendChild(gridToggle);
-    line.appendChild(label);
+    line.appendChild(labelText);
     div.appendChild(line);
+
+    // Prevent clicks on control from panning the map
+    L.DomEvent.disableClickPropagation(div);
+
+    // Hook up change after element exists
+    gridToggle.onchange = () => {
+      renderMarkers(filteredPoints());
+    };
 
     return div;
   };
@@ -299,9 +338,11 @@
   await loadBaseData();
   const baseLookups = ingestData(baseData);
   allPoints = baseLookups.points;
-  populateSelect(stateFilter, [...baseLookups.states].sort(), 'All States');
-  populateSelect(districtFilter, [...baseLookups.districts].sort(), 'All Districts');
-  populateSelect(tehsilFilter, [...baseLookups.tehsils].sort(), 'All Tehsils');
+
+  populateSelect(stateFilter,   [...baseLookups.states].sort(), 'All States');
+  populateSelect(districtFilter,[...baseLookups.districts].sort(), 'All Districts');
+  populateSelect(tehsilFilter,  [...baseLookups.tehsils].sort(), 'All Tehsils');
+
   setupCascading(baseLookups);
   renderMarkers(allPoints);
 })();
