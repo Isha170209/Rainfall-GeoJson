@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>India Rainfall Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header>
+    <h1>IMD Gridded Rainfall Data Distribution</h1>
+    <div id="controls">
+      <div class="filterTab">
+        <div class="tabTitle">State</div>
+        <select id="stateFilter"><option value="">All States</option></select>
+      </div>
+
+      <div class="filterTab">
+        <div class="tabTitle">District</div>
+        <select id="districtFilter"><option value="">All Districts</option></select>
+      </div>
+
+      <div class="filterTab">
+        <div class="tabTitle">Tehsil</div>
+        <select id="tehsilFilter"><option value="">All Tehsils</option></select>
+      </div>
+
+      <div class="filterTab">
+        <div class="tabTitle">Date</div>
+        <input type="date" id="dateFilter" />
+      </div>
+
+      <button id="submitBtn">Submit</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="map"></div>
+  </main>
+
+  <footer>
+    <small>Data: IMD-derived GeoJSON • Auto-updated daily</small>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
