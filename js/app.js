@@ -21,11 +21,11 @@
   }).addTo(map);
 
   // Layers
-  let gridLayer = L.layerGroup().addTo(map);   // grid is default
+  let gridLayer = L.layerGroup().addTo(map);   // grid (default visible)
   let markersLayer = L.layerGroup();           // circles added only when toggled
-  let markerToggle = null;
+  let markerToggle = null;                     // checkbox reference (set later)
 
-  // UI
+  // UI elements
   const stateFilter    = document.getElementById('stateFilter');
   const districtFilter = document.getElementById('districtFilter');
   const tehsilFilter   = document.getElementById('tehsilFilter');
@@ -35,7 +35,7 @@
   let baseData = null;
   let allPoints = [];
 
-  // Colors
+  // Colors & radius helpers (same as your prior logic)
   function colorForRain(mm) {
     if (mm === null || isNaN(mm)) return '#cccccc';
     if (mm === 0) return '#f7fbff';
@@ -52,17 +52,22 @@
     return Math.min(18, 4 + Math.sqrt(mm));
   }
 
-  // Snap to IMD grid
+  // Snap raw lat/lon to IMD grid center (returns [cLat, cLon] or null if outside)
   function snapToGrid(lat, lon) {
     if (lat < GRID_LAT_MIN || lat > GRID_LAT_MAX || lon < GRID_LON_MIN || lon > GRID_LON_MAX) {
-      return null; // outside India domain
+      return null; // outside grid domain
     }
-    const snappedLat = GRID_LAT_MIN + (Math.floor((lat - GRID_LAT_MIN) / CELL_SIZE) + 0.5) * CELL_SIZE;
-    const snappedLon = GRID_LON_MIN + (Math.floor((lon - GRID_LON_MIN) / CELL_SIZE) + 0.5) * CELL_SIZE;
-    return [snappedLat, snappedLon];
+    const iLat = Math.floor((lat - GRID_LAT_MIN) / CELL_SIZE);
+    const iLon = Math.floor((lon - GRID_LON_MIN) / CELL_SIZE);
+    const snappedLat = GRID_LAT_MIN + (iLat + 0.5) * CELL_SIZE;
+    const snappedLon = GRID_LON_MIN + (iLon + 0.5) * CELL_SIZE;
+    // clamp to max just in case of floating rounding
+    const cLat = Math.min(GRID_LAT_MAX, Math.max(GRID_LAT_MIN, Number(snappedLat.toFixed(6))));
+    const cLon = Math.min(GRID_LON_MAX, Math.max(GRID_LON_MIN, Number(snappedLon.toFixed(6))));
+    return [cLat, cLon];
   }
 
-  // Load base data
+  // Load base data (from manifest or fallback)
   async function loadBaseData() {
     try {
       const res = await fetch(manifestUrl + cacheBust);
@@ -81,7 +86,7 @@
     baseData = await fb.json();
   }
 
-  // Ingest GeoJSON
+  // Ingest GeoJSON -> point list and lookups (keeps original props)
   function ingestData(gjson) {
     const points = [];
     const states = new Set();
@@ -117,7 +122,7 @@
     return { points, states, districts, tehsils, mapStateToDistricts, mapStateDistToTehsils };
   }
 
-  // Populate dropdown
+  // Populate <select>
   function populateSelect(selectEl, items, placeholderText) {
     const current = selectEl.value;
     selectEl.innerHTML = '';
@@ -134,77 +139,116 @@
     if ([...items].includes(current)) selectEl.value = current;
   }
 
-  // Render layers
+  // Core rendering:
+  // - draw full grid covering GRID_LAT_MIN..GRID_LAT_MAX and GRID_LON_MIN..GRID_LON_MAX at CELL_SIZE steps
+  // - attach popup for each cell: shows data if a filtered point maps to that cell
+  // - when markerToggle is ON, show circle at the same cell center for cells that have data
   function renderData(points) {
     markersLayer.clearLayers();
     gridLayer.clearLayers();
 
-    const showCircles = !!(markerToggle && markerToggle.checked);
-
-    points.forEach(pt => {
+    // Build map from cell center key -> aggregated point (we keep last one; could be aggregated)
+    const cellData = new Map();
+    (points || []).forEach(pt => {
       if (!pt.latlng) return;
-      const [rawLat, rawLon] = pt.latlng;
-      const snapped = snapToGrid(rawLat, rawLon);
-      if (!snapped) return; // outside domain
-      const [cLat, cLon] = snapped;
-
-      const bounds = [
-        [cLat - CELL_SIZE / 2, cLon - CELL_SIZE / 2],
-        [cLat + CELL_SIZE / 2, cLon + CELL_SIZE / 2]
-      ];
-
-      const rect = L.rectangle(bounds, {
-        color: '#555',
-        weight: 0.7,
-        fillOpacity: 0,
-        dashArray: '4'
-      }).bindPopup(`
-        <b>State:</b> ${pt.state || 'N/A'}<br/>
-        <b>District:</b> ${pt.district || 'N/A'}<br/>
-        <b>Tehsil:</b> ${pt.tehsil || 'N/A'}<br/>
-        <b>Date:</b> ${pt.date || 'N/A'}<br/>
-        <b>Rainfall:</b> ${isNaN(pt.rain) ? 'N/A' : pt.rain + ' mm'}<br/>
-        <b>Cell center:</b> ${cLat.toFixed(4)}, ${cLon.toFixed(4)}
-      `);
-      gridLayer.addLayer(rect);
-
-      if (showCircles) {
-        const circle = L.circleMarker([cLat, cLon], {
-          radius: radiusForRain(pt.rain),
-          fillColor: colorForRain(pt.rain),
-          color: '#222',
-          weight: 0.6,
-          fillOpacity: 0.85
-        }).bindPopup(`
-          <b>State:</b> ${pt.state || 'N/A'}<br/>
-          <b>District:</b> ${pt.district || 'N/A'}<br/>
-          <b>Tehsil:</b> ${pt.tehsil || 'N/A'}<br/>
-          <b>Date:</b> ${pt.date || 'N/A'}<br/>
-          <b>Rainfall:</b> ${isNaN(pt.rain) ? 'N/A' : pt.rain + ' mm'}<br/>
-          <b>Point (grid center):</b> ${cLat.toFixed(4)}, ${cLon.toFixed(4)}
-        `);
-        markersLayer.addLayer(circle);
-      }
+      const snapped = snapToGrid(pt.latlng[0], pt.latlng[1]);
+      if (!snapped) return;
+      const key = `${snapped[0].toFixed(6)}|${snapped[1].toFixed(6)}`;
+      // If multiple raw points fall in same cell, you could aggregate; here we store the last.
+      cellData.set(key, { center: snapped, point: pt });
     });
 
+    // Draw the full grid (iterate lat centers and lon centers)
+    // Use while loops to avoid floating point accumulation issues
+    let lat = GRID_LAT_MIN;
+    while (lat <= GRID_LAT_MAX + 1e-9) {
+      let lon = GRID_LON_MIN;
+      while (lon <= GRID_LON_MAX + 1e-9) {
+        const cLat = Number(lat.toFixed(6));
+        const cLon = Number(lon.toFixed(6));
+        const bounds = [
+          [cLat - CELL_SIZE / 2, cLon - CELL_SIZE / 2],
+          [cLat + CELL_SIZE / 2, cLon + CELL_SIZE / 2]
+        ];
+
+        const key = `${cLat.toFixed(6)}|${cLon.toFixed(6)}`;
+        const data = cellData.get(key);
+
+        // Choose fill color & opacity: if data present, lightly color by rainfall; else very transparent
+        const hasData = !!data;
+        const fillColor = hasData ? colorForRain(data.point.rain) : '#ffffff';
+        const fillOpacity = hasData ? 0.12 : 0.02; // grid mostly transparent by default
+
+        const rect = L.rectangle(bounds, {
+          color: '#555',
+          weight: 0.7,
+          fillColor,
+          fillOpacity,
+          dashArray: '4'
+        });
+
+        // Popup: if data present show values, else say No data
+        if (hasData) {
+          const pt = data.point;
+          rect.bindPopup(`
+            <b>State:</b> ${pt.state || 'N/A'}<br/>
+            <b>District:</b> ${pt.district || 'N/A'}<br/>
+            <b>Tehsil:</b> ${pt.tehsil || 'N/A'}<br/>
+            <b>Date:</b> ${pt.date || 'N/A'}<br/>
+            <b>Rainfall:</b> ${isNaN(pt.rain) ? 'N/A' : pt.rain + ' mm'}<br/>
+            <b>Cell center:</b> ${cLat.toFixed(4)}, ${cLon.toFixed(4)}
+          `);
+        } else {
+          rect.bindPopup(`
+            <b>Cell center:</b> ${cLat.toFixed(4)}, ${cLon.toFixed(4)}<br/>
+            <i>No data for this cell</i>
+          `);
+        }
+
+        gridLayer.addLayer(rect);
+
+        // If circles toggled and data present => show circle at the cell center
+        if (markerToggle && markerToggle.checked && hasData) {
+          const pt = data.point;
+          const circle = L.circleMarker([cLat, cLon], {
+            radius: radiusForRain(pt.rain),
+            fillColor: colorForRain(pt.rain),
+            color: '#222',
+            weight: 0.6,
+            fillOpacity: 0.85
+          }).bindPopup(`
+            <b>State:</b> ${pt.state || 'N/A'}<br/>
+            <b>District:</b> ${pt.district || 'N/A'}<br/>
+            <b>Tehsil:</b> ${pt.tehsil || 'N/A'}<br/>
+            <b>Date:</b> ${pt.date || 'N/A'}<br/>
+            <b>Rainfall:</b> ${isNaN(pt.rain) ? 'N/A' : pt.rain + ' mm'}<br/>
+            <b>Point (grid center):</b> ${cLat.toFixed(4)}, ${cLon.toFixed(4)}
+          `);
+          markersLayer.addLayer(circle);
+        }
+
+        lon = Math.round((lon + CELL_SIZE) * 1e6) / 1e6;
+      }
+      lat = Math.round((lat + CELL_SIZE) * 1e6) / 1e6;
+    }
+
+    // Add/remove markers layer according to toggle
+    const showCircles = !!(markerToggle && markerToggle.checked);
     if (showCircles) {
       if (!map.hasLayer(markersLayer)) markersLayer.addTo(map);
     } else {
       if (map.hasLayer(markersLayer)) map.removeLayer(markersLayer);
     }
 
-    const targetLayer = (showCircles && markersLayer.getLayers().length)
-      ? markersLayer : gridLayer;
-
+    // Autozoom: prefer markers if visible (and present), else zoom to grid bounds (which cover full domain)
+    const targetLayer = (showCircles && markersLayer.getLayers().length) ? markersLayer : gridLayer;
     if (targetLayer.getLayers().length) {
       const bounds = targetLayer.getBounds().pad(0.2);
-      if (bounds.isValid()) {
-        map.flyToBounds(bounds, { padding: [50, 50], duration: 1.5 });
-      }
+      if (bounds.isValid()) map.flyToBounds(bounds, { padding: [50, 50], duration: 1.2 });
     }
   }
 
-  // Filtering
+  // Filtering helper: returns the subset of allPoints matching current filters
   function filteredPoints() {
     const s = stateFilter.value.trim();
     const d = districtFilter.value.trim();
@@ -219,7 +263,7 @@
     });
   }
 
-  // Cascade filters
+  // Cascade setup (keeps your original logic)
   function setupCascading(lookups) {
     stateFilter.onchange = () => {
       const s = stateFilter.value;
@@ -251,12 +295,10 @@
     };
     tehsilFilter.onchange = () => renderData(filteredPoints());
     dateFilter.onchange = () => renderData(filteredPoints());
-    if (markerToggle) {
-      markerToggle.onchange = () => renderData(filteredPoints());
-    }
+    if (markerToggle) markerToggle.onchange = () => renderData(filteredPoints());
   }
 
-  // Legend
+  // Legend (unchanged)
   const legend = L.control({ position: 'bottomleft' });
   legend.onAdd = function () {
     const div = L.DomUtil.create('div', 'legend');
@@ -284,7 +326,7 @@
   };
   legend.addTo(map);
 
-  // Coord display
+  // Coordinate box (keeps as before)
   const coordControl = L.control({ position: 'bottomleft' });
   coordControl.onAdd = function () {
     const div = L.DomUtil.create('div', 'coord-box');
@@ -305,7 +347,7 @@
     if (el) el.textContent = `Lat: ${lat}, Lon: ${lon}`;
   });
 
-  // Marker toggle
+  // Marker toggle control (top-right) — "Show Circles"
   const markerControl = L.control({ position: 'topright' });
   markerControl.onAdd = function () {
     const div = L.DomUtil.create('div', 'leaflet-bar grid-toggle-control');
@@ -334,13 +376,15 @@
   };
   markerControl.addTo(map);
 
-  // === INIT ===
+  // === INITIAL LOAD ===
   await loadBaseData();
   const baseLookups = ingestData(baseData);
   allPoints = baseLookups.points;
+
   populateSelect(stateFilter,   [...baseLookups.states].sort(), 'All States');
   populateSelect(districtFilter,[...baseLookups.districts].sort(), 'All Districts');
   populateSelect(tehsilFilter,  [...baseLookups.tehsils].sort(), 'All Tehsils');
+
   setupCascading(baseLookups);
   renderData(allPoints);
 })();
