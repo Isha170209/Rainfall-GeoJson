@@ -141,7 +141,7 @@
     markersLayer.clearLayers();
     gridLayer.clearLayers();
 
-    // Map cell center key -> aggregated point
+    // Build dictionary of grid cells that actually contain filtered data
     const cellData = new Map();
     (points || []).forEach(pt => {
       if (!pt.latlng) return;
@@ -151,69 +151,50 @@
       cellData.set(key, { center: snapped, point: pt });
     });
 
-    // Draw grid cells centered at IMD points
-    for (let lat = GRID_LAT_MIN; lat <= GRID_LAT_MAX; lat += CELL_SIZE) {
-      for (let lon = GRID_LON_MIN; lon <= GRID_LON_MAX; lon += CELL_SIZE) {
-        const cLat = Number(lat.toFixed(6));
-        const cLon = Number(lon.toFixed(6));
-        const bounds = [
-          [cLat - CELL_SIZE / 2, cLon - CELL_SIZE / 2],
-          [cLat + CELL_SIZE / 2, cLon + CELL_SIZE / 2]
-        ];
+    // Only draw cells that have data
+    for (const [key, data] of cellData.entries()) {
+      const [cLat, cLon] = data.center;
+      const bounds = [
+        [cLat - CELL_SIZE / 2, cLon - CELL_SIZE / 2],
+        [cLat + CELL_SIZE / 2, cLon + CELL_SIZE / 2]
+      ];
 
-        const key = `${cLat.toFixed(6)}|${cLon.toFixed(6)}`;
-        const data = cellData.get(key);
+      const fillColor = colorForRain(data.point.rain);
 
-        const hasData = !!data;
-        const fillColor = hasData ? colorForRain(data.point.rain) : '#ffffff';
-        const fillOpacity = hasData ? 0.25 : 0.05;
+      const rect = L.rectangle(bounds, {
+        color: '#555',
+        weight: 0.6,
+        fillColor,
+        fillOpacity: 0.25,
+        dashArray: '2,4'
+      }).bindPopup(`
+        <b>State:</b> ${data.point.state || 'N/A'}<br/>
+        <b>District:</b> ${data.point.district || 'N/A'}<br/>
+        <b>Tehsil:</b> ${data.point.tehsil || 'N/A'}<br/>
+        <b>Date:</b> ${data.point.date || 'N/A'}<br/>
+        <b>Rainfall:</b> ${isNaN(data.point.rain) ? 'N/A' : data.point.rain + ' mm'}<br/>
+        <b>Cell center:</b> ${cLat.toFixed(4)}, ${cLon.toFixed(4)}
+      `);
 
-        const rect = L.rectangle(bounds, {
-          color: '#555',
+      gridLayer.addLayer(rect);
+
+      // Circles when toggled
+      if (markerToggle && markerToggle.checked) {
+        const circle = L.circleMarker([cLat, cLon], {
+          radius: radiusForRain(data.point.rain),
+          fillColor: fillColor,
+          color: '#222',
           weight: 0.6,
-          fillColor,
-          fillOpacity,
-          dashArray: '2,4'
-        });
-
-        if (hasData) {
-          const pt = data.point;
-          rect.bindPopup(`
-            <b>State:</b> ${pt.state || 'N/A'}<br/>
-            <b>District:</b> ${pt.district || 'N/A'}<br/>
-            <b>Tehsil:</b> ${pt.tehsil || 'N/A'}<br/>
-            <b>Date:</b> ${pt.date || 'N/A'}<br/>
-            <b>Rainfall:</b> ${isNaN(pt.rain) ? 'N/A' : pt.rain + ' mm'}<br/>
-            <b>Cell center:</b> ${cLat.toFixed(4)}, ${cLon.toFixed(4)}
-          `);
-        } else {
-          rect.bindPopup(`
-            <b>Cell center:</b> ${cLat.toFixed(4)}, ${cLon.toFixed(4)}<br/>
-            <i>No data for this cell</i>
-          `);
-        }
-
-        gridLayer.addLayer(rect);
-
-        // Circles when toggled
-        if (markerToggle && markerToggle.checked && hasData) {
-          const pt = data.point;
-          const circle = L.circleMarker([cLat, cLon], {
-            radius: radiusForRain(pt.rain),
-            fillColor: colorForRain(pt.rain),
-            color: '#222',
-            weight: 0.6,
-            fillOpacity: 0.85
-          }).bindPopup(`
-            <b>State:</b> ${pt.state || 'N/A'}<br/>
-            <b>District:</b> ${pt.district || 'N/A'}<br/>
-            <b>Tehsil:</b> ${pt.tehsil || 'N/A'}<br/>
-            <b>Date:</b> ${pt.date || 'N/A'}<br/>
-            <b>Rainfall:</b> ${isNaN(pt.rain) ? 'N/A' : pt.rain + ' mm'}<br/>
-            <b>Point (grid center):</b> ${cLat.toFixed(4)}, ${cLon.toFixed(4)}
-          `);
-          markersLayer.addLayer(circle);
-        }
+          fillOpacity: 0.85
+        }).bindPopup(`
+          <b>State:</b> ${data.point.state || 'N/A'}<br/>
+          <b>District:</b> ${data.point.district || 'N/A'}<br/>
+          <b>Tehsil:</b> ${data.point.tehsil || 'N/A'}<br/>
+          <b>Date:</b> ${data.point.date || 'N/A'}<br/>
+          <b>Rainfall:</b> ${isNaN(data.point.rain) ? 'N/A' : data.point.rain + ' mm'}<br/>
+          <b>Point (grid center):</b> ${cLat.toFixed(4)}, ${cLon.toFixed(4)}
+        `);
+        markersLayer.addLayer(circle);
       }
     }
 
