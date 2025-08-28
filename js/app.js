@@ -57,10 +57,10 @@
     if (lat < GRID_LAT_MIN || lat > GRID_LAT_MAX || lon < GRID_LON_MIN || lon > GRID_LON_MAX) {
       return null;
     }
-    const iLat = Math.floor((lat - GRID_LAT_MIN) / CELL_SIZE);
-    const iLon = Math.floor((lon - GRID_LON_MIN) / CELL_SIZE);
-    const snappedLat = GRID_LAT_MIN + (iLat + 0.5) * CELL_SIZE;
-    const snappedLon = GRID_LON_MIN + (iLon + 0.5) * CELL_SIZE;
+    const iLat = Math.round((lat - GRID_LAT_MIN) / CELL_SIZE);
+    const iLon = Math.round((lon - GRID_LON_MIN) / CELL_SIZE);
+    const snappedLat = GRID_LAT_MIN + iLat * CELL_SIZE;
+    const snappedLon = GRID_LON_MIN + iLon * CELL_SIZE;
     return [Number(snappedLat.toFixed(6)), Number(snappedLon.toFixed(6))];
   }
 
@@ -151,11 +151,9 @@
       cellData.set(key, { center: snapped, point: pt });
     });
 
-    // Draw full grid
-    let lat = GRID_LAT_MIN + CELL_SIZE / 2;
-    while (lat < GRID_LAT_MAX) {
-      let lon = GRID_LON_MIN + CELL_SIZE / 2;
-      while (lon < GRID_LON_MAX) {
+    // Draw grid cells centered at IMD points
+    for (let lat = GRID_LAT_MIN; lat <= GRID_LAT_MAX; lat += CELL_SIZE) {
+      for (let lon = GRID_LON_MIN; lon <= GRID_LON_MAX; lon += CELL_SIZE) {
         const cLat = Number(lat.toFixed(6));
         const cLon = Number(lon.toFixed(6));
         const bounds = [
@@ -168,14 +166,14 @@
 
         const hasData = !!data;
         const fillColor = hasData ? colorForRain(data.point.rain) : '#ffffff';
-        const fillOpacity = hasData ? 0.15 : 0.05;
+        const fillOpacity = hasData ? 0.25 : 0.05;
 
         const rect = L.rectangle(bounds, {
           color: '#555',
-          weight: 0.7,
+          weight: 0.6,
           fillColor,
           fillOpacity,
-          dashArray: '4'
+          dashArray: '2,4'
         });
 
         if (hasData) {
@@ -216,10 +214,7 @@
           `);
           markersLayer.addLayer(circle);
         }
-
-        lon = Math.round((lon + CELL_SIZE) * 1e6) / 1e6;
       }
-      lat = Math.round((lat + CELL_SIZE) * 1e6) / 1e6;
     }
 
     // Toggle marker layer
@@ -274,8 +269,7 @@
       } else if (s && !d) {
         const tehs = new Set();
         (lookups.mapStateToDistricts.get(s) || []).forEach(dd => {
-          const k = `${s}||${dd}`;
-          (lookups.mapStateDistToTehsils.get(k) || []).forEach(t => tehs.add(t));
+          const k = `${s}||${dd}`; (lookups.mapStateDistToTehsils.get(k) || []).forEach(t => tehs.add(t));
         });
         populateSelect(tehsilFilter, [...tehs].sort(), 'All Tehsils');
       } else {
