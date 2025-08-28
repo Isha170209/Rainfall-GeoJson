@@ -35,7 +35,7 @@
   let baseData = null;
   let allPoints = [];
 
-  // Colors & radius helpers (same as your prior logic)
+  // Colors & radius helpers
   function colorForRain(mm) {
     if (mm === null || isNaN(mm)) return '#cccccc';
     if (mm === 0) return '#f7fbff';
@@ -52,22 +52,19 @@
     return Math.min(18, 4 + Math.sqrt(mm));
   }
 
-  // Snap raw lat/lon to IMD grid center (returns [cLat, cLon] or null if outside)
+  // Snap raw lat/lon to IMD grid center
   function snapToGrid(lat, lon) {
     if (lat < GRID_LAT_MIN || lat > GRID_LAT_MAX || lon < GRID_LON_MIN || lon > GRID_LON_MAX) {
-      return null; // outside grid domain
+      return null;
     }
     const iLat = Math.floor((lat - GRID_LAT_MIN) / CELL_SIZE);
     const iLon = Math.floor((lon - GRID_LON_MIN) / CELL_SIZE);
     const snappedLat = GRID_LAT_MIN + (iLat + 0.5) * CELL_SIZE;
     const snappedLon = GRID_LON_MIN + (iLon + 0.5) * CELL_SIZE;
-    // clamp to max just in case of floating rounding
-    const cLat = Math.min(GRID_LAT_MAX, Math.max(GRID_LAT_MIN, Number(snappedLat.toFixed(6))));
-    const cLon = Math.min(GRID_LON_MAX, Math.max(GRID_LON_MIN, Number(snappedLon.toFixed(6))));
-    return [cLat, cLon];
+    return [Number(snappedLat.toFixed(6)), Number(snappedLon.toFixed(6))];
   }
 
-  // Load base data (from manifest or fallback)
+  // Load base data
   async function loadBaseData() {
     try {
       const res = await fetch(manifestUrl + cacheBust);
@@ -86,7 +83,7 @@
     baseData = await fb.json();
   }
 
-  // Ingest GeoJSON -> point list and lookups (keeps original props)
+  // Ingest GeoJSON
   function ingestData(gjson) {
     const points = [];
     const states = new Set();
@@ -122,7 +119,7 @@
     return { points, states, districts, tehsils, mapStateToDistricts, mapStateDistToTehsils };
   }
 
-  // Populate <select>
+  // Populate select dropdown
   function populateSelect(selectEl, items, placeholderText) {
     const current = selectEl.value;
     selectEl.innerHTML = '';
@@ -139,31 +136,26 @@
     if ([...items].includes(current)) selectEl.value = current;
   }
 
-  // Core rendering:
-  // - draw full grid covering GRID_LAT_MIN..GRID_LAT_MAX and GRID_LON_MIN..GRID_LON_MAX at CELL_SIZE steps
-  // - attach popup for each cell: shows data if a filtered point maps to that cell
-  // - when markerToggle is ON, show circle at the same cell center for cells that have data
+  // Core rendering
   function renderData(points) {
     markersLayer.clearLayers();
     gridLayer.clearLayers();
 
-    // Build map from cell center key -> aggregated point (we keep last one; could be aggregated)
+    // Map cell center key -> aggregated point
     const cellData = new Map();
     (points || []).forEach(pt => {
       if (!pt.latlng) return;
       const snapped = snapToGrid(pt.latlng[0], pt.latlng[1]);
       if (!snapped) return;
       const key = `${snapped[0].toFixed(6)}|${snapped[1].toFixed(6)}`;
-      // If multiple raw points fall in same cell, you could aggregate; here we store the last.
       cellData.set(key, { center: snapped, point: pt });
     });
 
-    // Draw the full grid (iterate lat centers and lon centers)
-    // Use while loops to avoid floating point accumulation issues
-    let lat = GRID_LAT_MIN;
-    while (lat <= GRID_LAT_MAX + 1e-9) {
-      let lon = GRID_LON_MIN;
-      while (lon <= GRID_LON_MAX + 1e-9) {
+    // Draw full grid
+    let lat = GRID_LAT_MIN + CELL_SIZE / 2;
+    while (lat < GRID_LAT_MAX) {
+      let lon = GRID_LON_MIN + CELL_SIZE / 2;
+      while (lon < GRID_LON_MAX) {
         const cLat = Number(lat.toFixed(6));
         const cLon = Number(lon.toFixed(6));
         const bounds = [
@@ -174,10 +166,9 @@
         const key = `${cLat.toFixed(6)}|${cLon.toFixed(6)}`;
         const data = cellData.get(key);
 
-        // Choose fill color & opacity: if data present, lightly color by rainfall; else very transparent
         const hasData = !!data;
         const fillColor = hasData ? colorForRain(data.point.rain) : '#ffffff';
-        const fillOpacity = hasData ? 0.12 : 0.02; // grid mostly transparent by default
+        const fillOpacity = hasData ? 0.15 : 0.05;
 
         const rect = L.rectangle(bounds, {
           color: '#555',
@@ -187,7 +178,6 @@
           dashArray: '4'
         });
 
-        // Popup: if data present show values, else say No data
         if (hasData) {
           const pt = data.point;
           rect.bindPopup(`
@@ -207,7 +197,7 @@
 
         gridLayer.addLayer(rect);
 
-        // If circles toggled and data present => show circle at the cell center
+        // Circles when toggled
         if (markerToggle && markerToggle.checked && hasData) {
           const pt = data.point;
           const circle = L.circleMarker([cLat, cLon], {
@@ -232,7 +222,7 @@
       lat = Math.round((lat + CELL_SIZE) * 1e6) / 1e6;
     }
 
-    // Add/remove markers layer according to toggle
+    // Toggle marker layer
     const showCircles = !!(markerToggle && markerToggle.checked);
     if (showCircles) {
       if (!map.hasLayer(markersLayer)) markersLayer.addTo(map);
@@ -240,7 +230,7 @@
       if (map.hasLayer(markersLayer)) map.removeLayer(markersLayer);
     }
 
-    // Autozoom: prefer markers if visible (and present), else zoom to grid bounds (which cover full domain)
+    // Autozoom
     const targetLayer = (showCircles && markersLayer.getLayers().length) ? markersLayer : gridLayer;
     if (targetLayer.getLayers().length) {
       const bounds = targetLayer.getBounds().pad(0.2);
@@ -248,7 +238,7 @@
     }
   }
 
-  // Filtering helper: returns the subset of allPoints matching current filters
+  // Filtering helper
   function filteredPoints() {
     const s = stateFilter.value.trim();
     const d = districtFilter.value.trim();
@@ -263,7 +253,7 @@
     });
   }
 
-  // Cascade setup (keeps your original logic)
+  // Cascade setup
   function setupCascading(lookups) {
     stateFilter.onchange = () => {
       const s = stateFilter.value;
@@ -298,7 +288,7 @@
     if (markerToggle) markerToggle.onchange = () => renderData(filteredPoints());
   }
 
-  // Legend (unchanged)
+  // Legend
   const legend = L.control({ position: 'bottomleft' });
   legend.onAdd = function () {
     const div = L.DomUtil.create('div', 'legend');
@@ -326,7 +316,7 @@
   };
   legend.addTo(map);
 
-  // Coordinate box (keeps as before)
+  // Coordinate box
   const coordControl = L.control({ position: 'bottomleft' });
   coordControl.onAdd = function () {
     const div = L.DomUtil.create('div', 'coord-box');
@@ -347,7 +337,7 @@
     if (el) el.textContent = `Lat: ${lat}, Lon: ${lon}`;
   });
 
-  // Marker toggle control (top-right) — "Show Circles"
+  // Marker toggle
   const markerControl = L.control({ position: 'topright' });
   markerControl.onAdd = function () {
     const div = L.DomUtil.create('div', 'leaflet-bar grid-toggle-control');
@@ -376,7 +366,7 @@
   };
   markerControl.addTo(map);
 
-  // === INITIAL LOAD ===
+  // INITIAL LOAD
   await loadBaseData();
   const baseLookups = ingestData(baseData);
   allPoints = baseLookups.points;
