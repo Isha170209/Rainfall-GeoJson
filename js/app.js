@@ -165,7 +165,7 @@
         color: '#555',
         weight: 0.6,
         fillColor,
-        fillOpacity: 0.25,
+        fillOpacity: 0.75,
         dashArray: '2,4'
       }).bindPopup(`
         <b>State:</b> ${data.point.state || 'N/A'}<br/>
