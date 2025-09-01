@@ -47,6 +47,8 @@ if not os.path.exists(rain_csv_path):
     raise FileNotFoundError(f"{rain_csv_path} not found. Run download_imd_data.py first.")
 
 df = pd.read_csv(rain_csv_path)
+
+# ✅ Keep ALL dates in the file (do not restrict to just yesterday)
 df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce').dt.strftime('%Y-%m-%d')
 df = df.dropna(subset=['DateTime'])
 
