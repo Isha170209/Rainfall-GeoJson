@@ -352,12 +352,16 @@
   populateSelect(districtFilter,[...baseLookups.districts].sort(), 'All Districts');
   populateSelect(tehsilFilter,  [...baseLookups.tehsils].sort(), 'All Tehsils');
 
-  // 🔹 Set default date (latest available)
-  if (baseLookups.dates.size > 0) {
-    const latestDate = [...baseLookups.dates].sort().slice(-1)[0];
-    dateFilter.value = latestDate; // works with input[type="date"]
-  }
+  // 🔹 Set date range (for input[type="date"])
+if (baseLookups.dates.size > 0) {
+  const sortedDates = [...baseLookups.dates].sort();
+  const minDate = sortedDates[0];
+  const maxDate = sortedDates[sortedDates.length - 1];
 
-  setupCascading(baseLookups);
-  renderData(filteredPoints());
-})();
+  dateFilter.min = minDate;
+  dateFilter.max = maxDate;
+  dateFilter.value = maxDate;  // default latest
+}
+
+setupCascading(baseLookups);
+renderData(filteredPoints());
