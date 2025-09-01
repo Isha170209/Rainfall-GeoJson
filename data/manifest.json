@@ -1,4 +1,18 @@
 {
-  "latest": "2025-08-31.geojson",
+  "files": [
+    "2025-08-19.geojson",
+    "2025-08-20.geojson",
+    "2025-08-21.geojson",
+    "2025-08-22.geojson",
+    "2025-08-23.geojson",
+    "2025-08-24.geojson",
+    "2025-08-25.geojson",
+    "2025-08-26.geojson",
+    "2025-08-27.geojson",
+    "2025-08-28.geojson",
+    "2025-08-29.geojson",
+    "2025-08-30.geojson",
+    "2025-08-31.geojson"
+  ],
   "updated": "2025-09-01"
 }
