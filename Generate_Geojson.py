@@ -118,13 +118,20 @@ dated_filepath = os.path.join("data", dated_filename)
 if output_rain_geojson != dated_filepath:
     os.rename(output_rain_geojson, dated_filepath)
 
-# Manifest only keeps "latest" and "updated"
+# ✅ Collect all daily geojson files
+all_geojson_files = [
+    f for f in os.listdir("data")
+    if f.endswith(".geojson") and f != "India_tehsils_clean.geojson"
+]
+all_geojson_files.sort()  # ensures chronological order
+
+# ✅ Write manifest with all files
 manifest = {
-    "latest": dated_filename,
+    "files": all_geojson_files,
     "updated": datetime.now().strftime("%Y-%m-%d")
 }
 
 with open(manifest_path, "w") as f:
     json.dump(manifest, f, indent=2)
 
-print(f"📄 Manifest written with latest={dated_filename}, updated={manifest['updated']}")
+print(f"📄 Manifest written with {len(all_geojson_files)} files, updated={manifest['updated']}")
