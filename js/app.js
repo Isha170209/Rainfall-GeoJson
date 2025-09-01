@@ -29,7 +29,7 @@
   const stateFilter    = document.getElementById('stateFilter');
   const districtFilter = document.getElementById('districtFilter');
   const tehsilFilter   = document.getElementById('tehsilFilter');
-  const dateFilter     = document.getElementById('dateFilter'); // 🔹 now assumed <input type="date">
+  const dateFilter     = document.getElementById('dateFilter'); // 🔹 assumed <input type="date">
 
   // Data
   let baseData = null;
@@ -64,20 +64,30 @@
     return [Number(snappedLat.toFixed(6)), Number(snappedLon.toFixed(6))];
   }
 
-  // Load base data
+  // Load base data (modified to read manifest.files[])
   async function loadBaseData() {
     try {
       const res = await fetch(manifestUrl + cacheBust);
       if (res.ok) {
         const m = await res.json();
-        const url = dataBase + (m.latest || 'latest.geojson');
-        const g = await fetch(url + '?cache=' + Date.now());
-        if (g.ok) {
-          baseData = await g.json();
-          return;
+
+        // ✅ Use the last entry in manifest.files[]
+        let files = m.files || [];
+        if (files.length > 0) {
+          const latestFile = files[files.length - 1];
+          const url = dataBase + latestFile;
+          const g = await fetch(url + '?cache=' + Date.now());
+          if (g.ok) {
+            baseData = await g.json();
+            return;
+          }
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Manifest load failed", e);
+    }
+
+    // Fallback to static latest.geojson
     const fb = await fetch(latestFallback + '?cache=' + Date.now());
     if (!fb.ok) throw new Error('Failed to load fallback geojson');
     baseData = await fb.json();
@@ -89,7 +99,7 @@
     const states = new Set();
     const districts = new Set();
     const tehsils = new Set();
-    const dates = new Set();   // 🔹 collect available dates
+    const dates = new Set();
     const mapStateToDistricts = new Map();
     const mapStateDistToTehsils = new Map();
 
@@ -143,7 +153,6 @@
     markersLayer.clearLayers();
     gridLayer.clearLayers();
 
-    // Build dictionary of grid cells that actually contain filtered data
     const cellData = new Map();
     (points || []).forEach(pt => {
       if (!pt.latlng) return;
@@ -153,7 +162,6 @@
       cellData.set(key, { center: snapped, point: pt });
     });
 
-    // Only draw cells that have data
     for (const [key, data] of cellData.entries()) {
       const [cLat, cLon] = data.center;
       const bounds = [
@@ -180,7 +188,6 @@
 
       gridLayer.addLayer(rect);
 
-      // Circles when toggled
       if (markerToggle && markerToggle.checked) {
         const circle = L.circleMarker([cLat, cLon], {
           radius: radiusForRain(data.point.rain),
@@ -200,7 +207,6 @@
       }
     }
 
-    // Toggle marker layer
     const showCircles = !!(markerToggle && markerToggle.checked);
     if (showCircles) {
       if (!map.hasLayer(markersLayer)) markersLayer.addTo(map);
@@ -208,7 +214,6 @@
       if (map.hasLayer(markersLayer)) map.removeLayer(markersLayer);
     }
 
-    // Autozoom
     const targetLayer = (showCircles && markersLayer.getLayers().length) ? markersLayer : gridLayer;
     if (targetLayer.getLayers().length) {
       const bounds = targetLayer.getBounds().pad(0.2);
@@ -261,7 +266,7 @@
       renderData(filteredPoints());
     };
     tehsilFilter.onchange = () => renderData(filteredPoints());
-    dateFilter.onchange = () => renderData(filteredPoints()); // 🔹 works for input[type="date"]
+    dateFilter.onchange = () => renderData(filteredPoints());
     if (markerToggle) markerToggle.onchange = () => renderData(filteredPoints());
   }
 
@@ -352,15 +357,13 @@
   populateSelect(districtFilter,[...baseLookups.districts].sort(), 'All Districts');
   populateSelect(tehsilFilter,  [...baseLookups.tehsils].sort(), 'All Tehsils');
 
-  // 🔹 Set date range (for input[type="date"])
   if (baseLookups.dates.size > 0) {
     const sortedDates = [...baseLookups.dates].sort();
     const minDate = sortedDates[0];
     const maxDate = sortedDates[sortedDates.length - 1];
-
     dateFilter.min = minDate;
     dateFilter.max = maxDate;
-    dateFilter.value = maxDate;  // default latest
+    dateFilter.value = maxDate;
   }
 
   setupCascading(baseLookups);
