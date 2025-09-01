@@ -48,9 +48,14 @@ if not os.path.exists(rain_csv_path):
 
 df = pd.read_csv(rain_csv_path)
 
-# ✅ Keep ALL dates in the file (do not restrict to just yesterday)
+# Convert DateTime column to date string
 df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce').dt.strftime('%Y-%m-%d')
 df = df.dropna(subset=['DateTime'])
+
+# ✅ Filter data for only "yesterday"
+df = df[df['DateTime'] == yesterday]
+if df.empty:
+    raise ValueError(f"No rainfall data found for {yesterday}")
 
 # === Load Shapefile ===
 if not os.path.exists(shapefile_path):
