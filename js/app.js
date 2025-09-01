@@ -35,6 +35,9 @@
   let baseData = null;
   let allPoints = [];
 
+  // 🔹 NEW: keep manifest in memory
+  let manifestData = null;
+
   // Colors & radius helpers
   function colorForRain(mm) {
     if (mm === null || isNaN(mm)) return '#cccccc';
@@ -64,23 +67,45 @@
     return [Number(snappedLat.toFixed(6)), Number(snappedLon.toFixed(6))];
   }
 
+  // 🔹 NEW: load manifest.json
+  async function loadManifest() {
+    const res = await fetch(manifestUrl + cacheBust);
+    if (!res.ok) throw new Error('Failed to load manifest.json');
+    manifestData = await res.json();
+    return manifestData;
+  }
+
+  // 🔹 NEW: load a specific geojson by date (YYYY-MM-DD)
+  async function loadGeoJsonForDate(dateStr) {
+    if (!manifestData) await loadManifest();
+    const fileName = `${dateStr}.geojson`;
+    if (!manifestData.files || !manifestData.files.includes(fileName)) {
+      console.warn(`File for selected date not in manifest: ${fileName}`);
+      return null;
+    }
+    const res = await fetch(dataBase + fileName + '?cache=' + Date.now());
+    if (!res.ok) {
+      console.error('Failed to load', fileName);
+      return null;
+    }
+    return await res.json();
+  }
+
   // Load base data (modified to read manifest.files[])
   async function loadBaseData() {
     try {
-      const res = await fetch(manifestUrl + cacheBust);
-      if (res.ok) {
-        const m = await res.json();
+      // 🔹 Ensure manifest is loaded
+      if (!manifestData) await loadManifest();
 
-        // ✅ Use the last entry in manifest.files[]
-        let files = m.files || [];
-        if (files.length > 0) {
-          const latestFile = files[files.length - 1];
-          const url = dataBase + latestFile;
-          const g = await fetch(url + '?cache=' + Date.now());
-          if (g.ok) {
-            baseData = await g.json();
-            return;
-          }
+      // ✅ Use the last entry in manifest.files[]
+      let files = (manifestData && manifestData.files) || [];
+      if (files.length > 0) {
+        const latestFile = files[files.length - 1];
+        const url = dataBase + latestFile;
+        const g = await fetch(url + '?cache=' + Date.now());
+        if (g.ok) {
+          baseData = await g.json();
+          return;
         }
       }
     } catch (e) {
@@ -236,6 +261,25 @@
     });
   }
 
+  // 🔹 NEW: switch dataset by date
+  async function switchDate(dateStr) {
+    const gjson = await loadGeoJsonForDate(dateStr);
+    if (!gjson) return; // keep current data if load failed
+    const lookups = ingestData(gjson);
+    allPoints = lookups.points;
+
+    // repopulate filters with new lookups (preserve current selection where possible)
+    populateSelect(stateFilter,   [...lookups.states].sort(), 'All States');
+    populateSelect(districtFilter,[...lookups.districts].sort(), 'All Districts');
+    populateSelect(tehsilFilter,  [...lookups.tehsils].sort(), 'All Tehsils');
+
+    // re-wire cascading with new lookups
+    setupCascading(lookups);
+
+    // render with current filters applied
+    renderData(filteredPoints());
+  }
+
   // Cascade setup
   function setupCascading(lookups) {
     stateFilter.onchange = () => {
@@ -266,7 +310,18 @@
       renderData(filteredPoints());
     };
     tehsilFilter.onchange = () => renderData(filteredPoints());
-    dateFilter.onchange = () => renderData(filteredPoints());
+
+    // 🔄 MODIFIED: when date changes, load the file from manifest and refresh
+    dateFilter.onchange = async () => {
+      const selectedDate = dateFilter.value.trim();
+      if (selectedDate) {
+        await switchDate(selectedDate);
+      } else {
+        // if cleared, just render current data
+        renderData(filteredPoints());
+      }
+    };
+
     if (markerToggle) markerToggle.onchange = () => renderData(filteredPoints());
   }
 
@@ -350,6 +405,24 @@
 
   // INITIAL LOAD
   await loadBaseData();
+
+  // 🔹 Set date range from manifest files (so picker can choose any listed date)
+  if (manifestData && Array.isArray(manifestData.files) && manifestData.files.length > 0) {
+    const datesFromManifest = manifestData.files
+      .map(f => f.replace('.geojson', ''))
+      .filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s))
+      .sort();
+    if (datesFromManifest.length > 0) {
+      const minDate = datesFromManifest[0];
+      const maxDate = datesFromManifest[datesFromManifest.length - 1];
+      dateFilter.min = minDate;
+      dateFilter.max = maxDate;
+      dateFilter.value = maxDate; // default to latest available
+      // lock range so later block doesn't override with single-day range
+      dateFilter.dataset.lockedRange = '1';
+    }
+  }
+
   const baseLookups = ingestData(baseData);
   allPoints = baseLookups.points;
 
@@ -357,7 +430,8 @@
   populateSelect(districtFilter,[...baseLookups.districts].sort(), 'All Districts');
   populateSelect(tehsilFilter,  [...baseLookups.tehsils].sort(), 'All Tehsils');
 
-  if (baseLookups.dates.size > 0) {
+  // ❗ Keep original block but avoid overriding manifest-based range
+  if (!dateFilter.dataset.lockedRange && baseLookups.dates.size > 0) {
     const sortedDates = [...baseLookups.dates].sort();
     const minDate = sortedDates[0];
     const maxDate = sortedDates[sortedDates.length - 1];
@@ -368,4 +442,9 @@
 
   setupCascading(baseLookups);
   renderData(filteredPoints());
+
+  // 🔹 Ensure the map shows the latest day's file on first load (matches date picker)
+  if (dateFilter.value) {
+    await switchDate(dateFilter.value);
+  }
 })();
