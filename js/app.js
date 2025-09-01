@@ -353,15 +353,15 @@
   populateSelect(tehsilFilter,  [...baseLookups.tehsils].sort(), 'All Tehsils');
 
   // 🔹 Set date range (for input[type="date"])
-if (baseLookups.dates.size > 0) {
-  const sortedDates = [...baseLookups.dates].sort();
-  const minDate = sortedDates[0];
-  const maxDate = sortedDates[sortedDates.length - 1];
+  if (baseLookups.dates.size > 0) {
+    const sortedDates = [...baseLookups.dates].sort();
+    const minDate = sortedDates[0];
+    const maxDate = sortedDates[sortedDates.length - 1];
 
-  dateFilter.min = minDate;
-  dateFilter.max = maxDate;
-  dateFilter.value = maxDate;  // default latest
-}
+    dateFilter.min = minDate;
+    dateFilter.max = maxDate;
+    dateFilter.value = maxDate;  // default latest
+  }
 
-setupCascading(baseLookups);
-renderData(filteredPoints());
+  setupCascading(baseLookups);
+  renderData(filteredPoints());
