@@ -29,7 +29,7 @@
   const stateFilter    = document.getElementById('stateFilter');
   const districtFilter = document.getElementById('districtFilter');
   const tehsilFilter   = document.getElementById('tehsilFilter');
-  const dateFilter     = document.getElementById('dateFilter');
+  const dateFilter     = document.getElementById('dateFilter'); // 🔹 now assumed <input type="date">
 
   // Data
   let baseData = null;
@@ -89,6 +89,7 @@
     const states = new Set();
     const districts = new Set();
     const tehsils = new Set();
+    const dates = new Set();   // 🔹 collect available dates
     const mapStateToDistricts = new Map();
     const mapStateDistToTehsils = new Map();
 
@@ -105,6 +106,7 @@
       states.add(state);
       districts.add(district);
       tehsils.add(tehsil);
+      if (date) dates.add(date);
 
       if (!mapStateToDistricts.has(state)) mapStateToDistricts.set(state, new Set());
       mapStateToDistricts.get(state).add(district);
@@ -116,7 +118,7 @@
       points.push({ latlng: p, props, rain, state, district, tehsil, date });
     });
 
-    return { points, states, districts, tehsils, mapStateToDistricts, mapStateDistToTehsils };
+    return { points, states, districts, tehsils, dates, mapStateToDistricts, mapStateDistToTehsils };
   }
 
   // Populate select dropdown
@@ -259,7 +261,7 @@
       renderData(filteredPoints());
     };
     tehsilFilter.onchange = () => renderData(filteredPoints());
-    dateFilter.onchange = () => renderData(filteredPoints());
+    dateFilter.onchange = () => renderData(filteredPoints()); // 🔹 works for input[type="date"]
     if (markerToggle) markerToggle.onchange = () => renderData(filteredPoints());
   }
 
@@ -350,6 +352,12 @@
   populateSelect(districtFilter,[...baseLookups.districts].sort(), 'All Districts');
   populateSelect(tehsilFilter,  [...baseLookups.tehsils].sort(), 'All Tehsils');
 
+  // 🔹 Set default date (latest available)
+  if (baseLookups.dates.size > 0) {
+    const latestDate = [...baseLookups.dates].sort().slice(-1)[0];
+    dateFilter.value = latestDate; // works with input[type="date"]
+  }
+
   setupCascading(baseLookups);
-  renderData(allPoints);
+  renderData(filteredPoints());
 })();
