@@ -365,3 +365,4 @@
 
   setupCascading(baseLookups);
   renderData(filteredPoints());
+})();
