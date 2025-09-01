@@ -403,6 +403,57 @@
   };
   markerControl.addTo(map);
 
+  // === DOWNLOAD PANEL CONTROL ===
+  let downloadPanelVisible = false;
+
+  // Create floating panel
+  const downloadPanel = document.createElement('div');
+  downloadPanel.id = 'downloadPanel';
+  document.body.appendChild(downloadPanel);
+
+  downloadPanel.innerHTML = `
+    <h4 style="margin:0 0 8px 0;">Download Data</h4>
+    <label>Data Type:</label>
+    <select id="dlDataType">
+      <option value="Rainfall">Rainfall</option>
+    </select>
+
+    <label>Start Date:</label>
+    <input type="date" id="dlStartDate"/>
+
+    <label>End Date:</label>
+    <input type="date" id="dlEndDate"/>
+
+    <label>Latitude:</label>
+    <input type="number" id="dlLat" step="0.0001"/>
+
+    <label>Longitude:</label>
+    <input type="number" id="dlLon" step="0.0001"/>
+
+    <button id="dlButton">Download XLSX</button>
+  `;
+
+  // Toggle button on map
+  const downloadControl = L.control({ position: 'topleft' });
+  downloadControl.onAdd = function () {
+    const div = L.DomUtil.create('div', 'leaflet-bar');
+    div.style.background = '#fff';
+    div.style.cursor = 'pointer';
+    div.style.padding = '6px';
+    div.style.fontSize = '13px';
+    div.style.fontWeight = 'bold';
+    div.style.textAlign = 'center';
+    div.style.borderRadius = '4px';
+    div.innerText = '⬇️ Download';
+    div.onclick = () => {
+      downloadPanelVisible = !downloadPanelVisible;
+      downloadPanel.style.display = downloadPanelVisible ? 'block' : 'none';
+    };
+    return div;
+  };
+  downloadControl.addTo(map);
+ 
+
   // INITIAL LOAD
   await loadBaseData();
 
@@ -447,4 +498,70 @@
   if (dateFilter.value) {
     await switchDate(dateFilter.value);
   }
+
+  // === DOWNLOAD HANDLER ===
+  document.getElementById('dlButton').onclick = async () => {
+    const lat = parseFloat(document.getElementById('dlLat').value);
+    const lon = parseFloat(document.getElementById('dlLon').value);
+    const startDate = document.getElementById('dlStartDate').value;
+    const endDate = document.getElementById('dlEndDate').value;
+
+    if (isNaN(lat) || isNaN(lon) || !startDate || !endDate) {
+      alert("Please enter valid lat/lon and date range.");
+      return;
+    }
+
+    if (!manifestData) await loadManifest();
+    const files = manifestData.files || [];
+    const filteredFiles = files.filter(f => {
+      const d = f.replace('.geojson','');
+      return d >= startDate && d <= endDate;
+    });
+
+    if (filteredFiles.length === 0) {
+      alert("No data available for selected range.");
+      return;
+    }
+
+    const rows = [];
+    for (let file of filteredFiles) {
+      try {
+        const res = await fetch(dataBase + file + '?cache=' + Date.now());
+        if (!res.ok) continue;
+        const gj = await res.json();
+
+        (gj.features || []).forEach(f => {
+          const props = f.properties || {};
+          const [flon, flat] = f.geometry?.coordinates || [];
+          if (flat && flon &&
+              Math.abs(flat - lat) < 0.001 &&
+              Math.abs(flon - lon) < 0.001) {
+            rows.push({
+              Date: props.Date,
+              Latitude: flat,
+              Longitude: flon,
+              State: props.State,
+              District: props.District,
+              Tehsil: props.Tehsil,
+              Rainfall: props.Rainfall
+            });
+          }
+        });
+      } catch (e) {
+        console.error("Error reading", file, e);
+      }
+    }
+
+    if (rows.length === 0) {
+      alert("No matching data found for this location.");
+      return;
+    }
+
+    // Convert to XLSX and trigger download
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Rainfall");
+    XLSX.writeFile(wb, `Rainfall_${lat}_${lon}_${startDate}_${endDate}.xlsx`);
+  };
+
 })();

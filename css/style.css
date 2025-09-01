@@ -185,3 +185,50 @@ footer {
 
   .filterTab { min-width: 100%; }
 }
+
+/* ===== Download Panel ===== */
+#downloadPanel {
+  position: absolute;
+  top: 70px;   /* just below header+filters */
+  left: 10px;
+  width: 240px;
+  max-height: 80%;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  z-index: 1000;
+  display: none; /* hidden by default */
+}
+
+#downloadPanel label {
+  font-size: 13px;
+  font-weight: bold;
+  display: block;
+  margin-top: 6px;
+}
+
+#downloadPanel input,
+#downloadPanel select {
+  width: 100%;
+  padding: 4px;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+#downloadPanel button {
+  width: 100%;
+  padding: 8px;
+  background: #cc0000;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#downloadPanel button:hover {
+  background: #990000;
+}
+
