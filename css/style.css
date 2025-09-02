@@ -75,6 +75,76 @@ header {
   background: #990000;
 }
 
+/* ===== Download Panel (inside controls, slide from left) ===== */
+#downloadToggle {
+  background: #cc0000;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-right: auto; /* stick to left of controls */
+  transition: background 0.2s ease;
+}
+
+#downloadToggle:hover {
+  background: #990000;
+}
+
+#downloadPanel {
+  position: absolute;
+  top: 100%;        /* directly below controls bar */
+  left: 0;
+  width: 240px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 0 8px 8px 0;
+  padding: 10px;
+  box-shadow: 2px 0 6px rgba(0,0,0,0.25);
+  z-index: 2000;
+
+  /* Slide-in effect */
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-in-out;
+}
+
+#downloadPanel.active {
+  transform: translateX(0);
+}
+
+#downloadPanel label {
+  font-size: 13px;
+  font-weight: bold;
+  display: block;
+  margin-top: 6px;
+}
+
+#downloadPanel input,
+#downloadPanel select {
+  width: 100%;
+  padding: 4px;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+#downloadPanel button {
+  width: 100%;
+  padding: 8px;
+  background: #cc0000;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#downloadPanel button:hover {
+  background: #990000;
+}
+
 /* ===== Map Container ===== */
 #map {
   height: calc(100vh - 60px); /* header + controls reduced height */
@@ -187,72 +257,4 @@ footer {
   .filterTab { min-width: 100%; }
 }
 
-/* ===== Download Panel (inside controls, slide from left) ===== */
-#downloadToggle {
-  background: #cc0000;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  padding: 8px 14px;
-  font-size: 14px;
-  font-weight: 600;
-  margin-right: auto; /* stick to left of controls */
-  transition: background 0.2s ease;
-}
 
-#downloadToggle:hover {
-  background: #990000;
-}
-
-#downloadPanel {
-  position: absolute;
-  top: 100%;        /* directly below controls bar */
-  left: 0;
-  width: 240px;
-  max-height: 80vh;
-  overflow-y: auto;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 0 8px 8px 0;
-  padding: 10px;
-  box-shadow: 2px 0 6px rgba(0,0,0,0.25);
-  z-index: 2000;
-
-  /* Slide-in effect */
-  transform: translateX(-100%);
-  transition: transform 0.3s ease-in-out;
-}
-
-#downloadPanel.active {
-  transform: translateX(0);
-}
-
-#downloadPanel label {
-  font-size: 13px;
-  font-weight: bold;
-  display: block;
-  margin-top: 6px;
-}
-
-#downloadPanel input,
-#downloadPanel select {
-  width: 100%;
-  padding: 4px;
-  font-size: 13px;
-  margin-bottom: 6px;
-}
-
-#downloadPanel button {
-  width: 100%;
-  padding: 8px;
-  background: #cc0000;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-#downloadPanel button:hover {
-  background: #990000;
-}
