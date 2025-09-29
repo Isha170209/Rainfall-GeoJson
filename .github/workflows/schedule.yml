@@ -2,7 +2,7 @@ name: Run IMD Script Daily
 
 on:
   schedule:
-    - cron: '0 22 * * *'  # 4:00 AM IST (IST = UTC+5:30)
+    - cron: '30 2 * * *'  # 8:00 AM IST (IST = UTC+5:30)
   workflow_dispatch:
 
 jobs:
