@@ -2,7 +2,7 @@ name: Convert IMD CSV to GeoJSON
 
 on:
   schedule:
-    - cron: '30 5 * * *'  # 11:00 AM IST
+    - cron: '0 6 * * *'  # 11:00 AM IST
   workflow_dispatch:
 
 jobs:
